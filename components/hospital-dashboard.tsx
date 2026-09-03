@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { LogOut, Home, Users, Calendar, Menu, X } from "lucide-react"
+import { LogOut, Home, Users, Calendar, Menu, X, Brain } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import PatientInfo from "./patient-info"
 import TestResultsView from "./test-results-view"
@@ -55,10 +55,15 @@ function AdminDashboard({
       >
         <div className="flex h-full flex-col">
           <div className="border-b border-sidebar-border p-6">
-            <div className="flex h-12 items-center justify-center rounded-lg bg-sidebar-primary">
-              <span className="text-2xl font-bold text-sidebar-primary-foreground">+</span>
+            <div className="flex h-12 items-center justify-center gap-2">
+              <div className="w-8 h-8 rounded-full border-2 border-sidebar-primary flex items-center justify-center">
+                <Brain className="w-4 h-4 text-sidebar-primary" />
+              </div>
+              <div className="leading-tight">
+                <p className="text-[10px] font-bold text-sidebar-primary tracking-widest uppercase">Psychometrics</p>
+                <p className="text-[10px] font-bold text-sidebar-primary tracking-widest uppercase">+ Evaluation</p>
+              </div>
             </div>
-            <p className="mt-3 text-center text-sm font-semibold text-sidebar-primary">MediCare</p>
           </div>
           <nav className="flex-1 space-y-2 px-3 py-6">
             {navItems.map((item) => (
@@ -102,7 +107,7 @@ function AdminDashboard({
             </button>
             <div>
               <h1 className="text-2xl font-bold">{headerTitle}</h1>
-              <p className="text-sm text-muted-foreground">Hospital Admin Dashboard · {headerId}</p>
+              <p className="text-sm text-muted-foreground">Psychometrics Admin Dashboard · {headerId}</p>
             </div>
           </div>
         </header>
