@@ -97,17 +97,29 @@ function AdminDashboard({
       </aside>
       <main className="flex flex-1 flex-col overflow-auto">
         <header className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 shadow-sm md:px-6">
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="rounded-lg p-2 hover:bg-muted md:hidden"
-            >
-              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold">{headerTitle}</h1>
-              <p className="text-sm text-muted-foreground">Psychometrics Admin Dashboard · {headerId}</p>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="rounded-lg p-2 hover:bg-muted md:hidden"
+              >
+                {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold">{headerTitle}</h1>
+                <p className="text-sm text-muted-foreground">Psychometrics Admin Dashboard · {headerId}</p>
+              </div>
+            </div>
+            {/* Branding badge — visible on md+ */}
+            <div className="hidden md:flex items-center gap-2 border border-border rounded-lg px-3 py-2 bg-muted/30">
+              <div className="w-7 h-7 rounded-full border-2 border-primary flex items-center justify-center">
+                <Brain className="w-3.5 h-3.5 text-primary" />
+              </div>
+              <div className="leading-tight">
+                <p className="text-[9px] font-bold text-primary tracking-widest uppercase">Psychometrics</p>
+                <p className="text-[9px] font-bold text-primary tracking-widest uppercase">+ Evaluation</p>
+              </div>
             </div>
           </div>
         </header>
