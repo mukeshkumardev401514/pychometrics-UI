@@ -1,6 +1,7 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Brain, Shield, FileText, Globe, CheckCircle, Lock, Globe2, Facebook, Linkedin, Twitter, Instagram } from "lucide-react"
+import { CheckCircle, Lock, Globe2, Facebook, Linkedin, Twitter, Instagram } from "lucide-react"
 
 export default function LandingPage() {
   return (
@@ -11,13 +12,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center">
-              <Brain className="w-5 h-5 text-primary" />
-            </div>
-            <div className="leading-tight">
-              <p className="text-xs font-bold text-primary tracking-widest uppercase">Psychometrics</p>
-              <p className="text-xs font-bold text-primary tracking-widest uppercase">+ Evaluation</p>
-            </div>
+            <Image
+              src="/psychometrics_evaluation_ui_assets/logo/psychometrics-evaluation-logo.png"
+              alt="Psychometrics Evaluation"
+              width={140}
+              height={48}
+              className="h-10 w-auto object-contain"
+            />
           </div>
 
           {/* Nav Links */}
@@ -80,29 +81,14 @@ export default function LandingPage() {
 
           {/* Right Illustration */}
           <div className="flex-1 flex justify-center">
-            <div className="relative w-80 h-80">
-              {/* Decorative wave background */}
-              <svg viewBox="0 0 320 320" className="absolute inset-0 w-full h-full" fill="none">
-                <ellipse cx="160" cy="280" rx="160" ry="40" fill="#e0f7f7" opacity="0.7" />
-                <ellipse cx="160" cy="300" rx="130" ry="30" fill="#b2ebf2" opacity="0.5" />
-              </svg>
-              {/* Brain silhouette */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-48 h-48 bg-gradient-to-br from-teal-700 to-teal-500 rounded-full flex items-center justify-center shadow-2xl">
-                  <Brain className="w-24 h-24 text-white opacity-90" />
-                </div>
-              </div>
-              {/* Floating icons */}
-              <div className="absolute top-8 right-6 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center border border-teal-100">
-                <FileText className="w-5 h-5 text-primary" />
-              </div>
-              <div className="absolute top-20 left-2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center border border-teal-100">
-                <Shield className="w-5 h-5 text-primary" />
-              </div>
-              <div className="absolute bottom-24 right-2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center border border-teal-100">
-                <Globe className="w-5 h-5 text-primary" />
-              </div>
-            </div>
+            <Image
+              src="/psychometrics_evaluation_ui_assets/illustrations/hero-brain-medical.png"
+              alt="Brain medical illustration"
+              width={420}
+              height={420}
+              className="w-full max-w-sm md:max-w-md object-contain drop-shadow-xl"
+              priority
+            />
           </div>
         </div>
       </section>
@@ -117,22 +103,22 @@ export default function LandingPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
-                icon: Brain,
+                icon: "/psychometrics_evaluation_ui_assets/icons/in-depth-insights.png",
                 title: "In-Depth Insights",
                 desc: "Gain deep insights into your personality traits, cognitive abilities and work preferences.",
               },
               {
-                icon: Shield,
+                icon: "/psychometrics_evaluation_ui_assets/icons/scientifically-designed.png",
                 title: "Scientifically Designed",
                 desc: "Our assessments are created by experts and based on global psychometric standards.",
               },
               {
-                icon: FileText,
+                icon: "/psychometrics_evaluation_ui_assets/icons/personalized-reports.png",
                 title: "Personalized Reports",
                 desc: "Receive detailed reports with actionable recommendations for your growth.",
               },
               {
-                icon: Globe,
+                icon: "/psychometrics_evaluation_ui_assets/icons/global-recognition.png",
                 title: "Global Recognition",
                 desc: "Trusted by educational institutions, organizations and professionals worldwide.",
               },
@@ -142,7 +128,7 @@ export default function LandingPage() {
                 className="p-6 rounded-xl border border-gray-100 bg-white hover:shadow-md hover:border-primary/20 transition-all text-center space-y-3"
               >
                 <div className="w-14 h-14 bg-teal-50 rounded-full flex items-center justify-center mx-auto">
-                  <item.icon className="w-7 h-7 text-primary" />
+                  <Image src={item.icon} alt={item.title} width={36} height={36} className="w-9 h-9 object-contain" />
                 </div>
                 <h3 className="font-bold text-gray-800 text-sm">{item.title}</h3>
                 <p className="text-gray-500 text-xs leading-relaxed">{item.desc}</p>
@@ -177,15 +163,13 @@ export default function LandingPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-10 mb-10">
             {/* Brand */}
             <div className="lg:col-span-1 space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full border-2 border-primary flex items-center justify-center">
-                  <Brain className="w-4 h-4 text-primary" />
-                </div>
-                <div className="leading-tight">
-                  <p className="text-xs font-bold text-primary tracking-widest uppercase">Psychometrics</p>
-                  <p className="text-xs font-bold text-primary tracking-widest uppercase">+ Evaluation</p>
-                </div>
-              </div>
+              <Image
+                src="/psychometrics_evaluation_ui_assets/logo/psychometrics-evaluation-logo.png"
+                alt="Psychometrics Evaluation"
+                width={140}
+                height={48}
+                className="h-10 w-auto object-contain brightness-0 invert"
+              />
               <p className="text-xs text-gray-400 leading-relaxed">
                 Empowering individuals and organizations through scientifically designed assessments.
               </p>

@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Eye, EyeOff, Mail, Lock, Brain, ClipboardCheck, Shield } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock } from "lucide-react"
 import { loginUser } from "@/lib/auth-service"
 import { normalizeDashboardUser } from "@/lib/dashboard-user"
 
@@ -59,14 +60,14 @@ export default function LoginPage() {
       {/* ── Left Illustration Panel ── */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-500 flex-col items-center justify-center relative overflow-hidden p-12">
         {/* Logo */}
-        <div className="absolute top-8 left-8 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full border-2 border-white/60 flex items-center justify-center">
-            <Brain className="w-5 h-5 text-white" />
-          </div>
-          <div className="leading-tight">
-            <p className="text-xs font-bold text-white tracking-widest uppercase">Psychometrics</p>
-            <p className="text-xs font-bold text-white tracking-widest uppercase">+ Evaluation</p>
-          </div>
+        <div className="absolute top-8 left-8 bg-white rounded-lg px-3 py-2">
+          <Image
+            src="/psychometrics_evaluation_ui_assets/logo/psychometrics-evaluation-logo.png"
+            alt="Psychometrics Evaluation"
+            width={160}
+            height={44}
+            className="h-9 w-auto object-contain"
+          />
         </div>
 
         {/* Decorative waves */}
@@ -77,14 +78,13 @@ export default function LoginPage() {
 
         {/* Central illustration */}
         <div className="flex flex-col items-center text-center space-y-6 z-10">
-          <div className="relative">
-            <div className="w-40 h-48 bg-white/10 rounded-2xl border border-white/20 flex items-center justify-center backdrop-blur-sm">
-              <ClipboardCheck className="w-20 h-20 text-white/80" />
-            </div>
-            <div className="absolute -top-3 -right-3 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center border border-white/30">
-              <Shield className="w-5 h-5 text-white" />
-            </div>
-          </div>
+          <Image
+            src="/psychometrics_evaluation_ui_assets/illustrations/login-clipboard-shield.png"
+            alt="Login illustration"
+            width={280}
+            height={280}
+            className="w-64 h-64 object-contain drop-shadow-xl"
+          />
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-white">Welcome Back!</h2>
             <p className="text-white/70 text-sm max-w-xs leading-relaxed">
@@ -98,13 +98,13 @@ export default function LoginPage() {
       <div className="flex-1 flex flex-col">
         {/* Mobile Logo */}
         <div className="lg:hidden flex items-center gap-3 px-6 pt-6">
-          <div className="w-9 h-9 rounded-full border-2 border-primary flex items-center justify-center">
-            <Brain className="w-5 h-5 text-primary" />
-          </div>
-          <div className="leading-tight">
-            <p className="text-xs font-bold text-primary tracking-widest uppercase">Psychometrics</p>
-            <p className="text-xs font-bold text-primary tracking-widest uppercase">+ Evaluation</p>
-          </div>
+          <Image
+            src="/psychometrics_evaluation_ui_assets/logo/psychometrics-evaluation-logo.png"
+            alt="Psychometrics Evaluation"
+            width={200}
+            height={58}
+            className="h-14 w-auto object-contain"
+          />
         </div>
 
         <div className="flex-1 flex items-center justify-center p-8 lg:p-16">

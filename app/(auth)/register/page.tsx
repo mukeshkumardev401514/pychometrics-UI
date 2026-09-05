@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Eye, EyeOff, Mail, Lock, User, Brain, ClipboardList, Shield } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User } from "lucide-react"
 import { registerPatientJson, buildRegistrationFormData, registerPatient, USER_ROLE } from "@/lib/auth-service"
 import { apiFetch } from "@/lib/backend-api"
 
@@ -91,14 +92,14 @@ export default function RegisterPage() {
       {/* ── Left Illustration Panel ── */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-500 flex-col items-center justify-center relative overflow-hidden p-12">
         {/* Logo */}
-        <div className="absolute top-8 left-8 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full border-2 border-white/60 flex items-center justify-center">
-            <Brain className="w-5 h-5 text-white" />
-          </div>
-          <div className="leading-tight">
-            <p className="text-xs font-bold text-white tracking-widest uppercase">Psychometrics</p>
-            <p className="text-xs font-bold text-white tracking-widest uppercase">+ Evaluation</p>
-          </div>
+        <div className="absolute top-8 left-8 bg-white rounded-lg px-3 py-2">
+          <Image
+            src="/psychometrics_evaluation_ui_assets/logo/psychometrics-evaluation-logo.png"
+            alt="Psychometrics Evaluation"
+            width={160}
+            height={44}
+            className="h-9 w-auto object-contain"
+          />
         </div>
 
         {/* Decorative waves */}
@@ -109,14 +110,13 @@ export default function RegisterPage() {
 
         {/* Central illustration */}
         <div className="flex flex-col items-center text-center space-y-6 z-10">
-          <div className="relative">
-            <div className="w-40 h-48 bg-white/10 rounded-2xl border border-white/20 flex items-center justify-center backdrop-blur-sm">
-              <ClipboardList className="w-20 h-20 text-white/80" />
-            </div>
-            <div className="absolute -top-3 -right-3 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center border border-white/30">
-              <User className="w-5 h-5 text-white" />
-            </div>
-          </div>
+          <Image
+            src="/psychometrics_evaluation_ui_assets/illustrations/signup-profile-shield.png"
+            alt="Sign up illustration"
+            width={280}
+            height={280}
+            className="w-64 h-64 object-contain drop-shadow-xl"
+          />
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-white">Create Your Account</h2>
             <p className="text-white/70 text-sm max-w-xs leading-relaxed">
@@ -130,13 +130,13 @@ export default function RegisterPage() {
       <div className="flex-1 flex flex-col overflow-y-auto">
         {/* Mobile Logo */}
         <div className="lg:hidden flex items-center gap-3 px-6 pt-6">
-          <div className="w-9 h-9 rounded-full border-2 border-primary flex items-center justify-center">
-            <Brain className="w-5 h-5 text-primary" />
-          </div>
-          <div className="leading-tight">
-            <p className="text-xs font-bold text-primary tracking-widest uppercase">Psychometrics</p>
-            <p className="text-xs font-bold text-primary tracking-widest uppercase">+ Evaluation</p>
-          </div>
+          <Image
+            src="/psychometrics_evaluation_ui_assets/logo/psychometrics-evaluation-logo.png"
+            alt="Psychometrics Evaluation"
+            width={200}
+            height={58}
+            className="h-14 w-auto object-contain"
+          />
         </div>
 
         <div className="flex-1 flex items-center justify-center p-8 lg:p-16">
