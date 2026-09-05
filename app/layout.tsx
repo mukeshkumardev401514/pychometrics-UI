@@ -8,25 +8,11 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "MediCare Hospital",
-  description: "Patient Test Management System",
-  generator: "v0.app",
+  title: "Psychometrics Evaluation",
+  description: "A scientifically designed psychometric evaluation platform to discover your strengths and unlock your potential.",
   icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
+    icon: "/psychometrics_evaluation_ui_assets/logo/psychometrics-evaluation-logo.png",
+    apple: "/psychometrics_evaluation_ui_assets/logo/psychometrics-evaluation-logo.png",
   },
 }
 
