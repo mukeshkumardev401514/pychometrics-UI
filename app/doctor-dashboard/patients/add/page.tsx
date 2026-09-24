@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 import DoctorSidebar from "@/components/doctor-sidebar"
 import DoctorTopBar from "@/components/doctor-topbar"
+import { apiClient } from "@/lib/api-client"
 
 type Step = 1 | 2 | 3
 
@@ -101,7 +102,11 @@ export default function AddPatientPage() {
   const [gender,      setGender]      = useState("")
   const [phone,       setPhone]       = useState("")
   const [email,       setEmail]       = useState("")
+  const [patientCode, setPatientCode] = useState("")
+  const [password,    setPassword]    = useState("")
   const [address,     setAddress]     = useState("")
+  const [addressLine2, setAddressLine2] = useState("")
+  const [country,     setCountry]     = useState("India")
   const [city,        setCity]        = useState("")
   const [state,       setState]       = useState("")
   const [pincode,     setPincode]     = useState("")
@@ -121,10 +126,45 @@ export default function AddPatientPage() {
   const [dueDate,            setDueDate]            = useState("")
   const [priority,           setPriority]           = useState("")
   const [assignNotes,        setAssignNotes]        = useState("")
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleSubmit = () => {
-    // In a real app this would POST to the API
-    router.push("/doctor-dashboard/patients")
+  const handleSubmit = async () => {
+    setSaving(true)
+    setError("")
+
+    try {
+      await apiClient.post("/api/external/patients", {
+        email,
+        password,
+        first_name: firstName,
+        last_name: lastName,
+        mobile: phone,
+        patient_code: patientCode,
+        date_of_birth: dob,
+        gender: gender.toUpperCase(),
+        address_line1: address,
+        address_line2: addressLine2,
+        city,
+        state,
+        postal_code: pincode,
+        country,
+        emergency_contact_name: emergencyName,
+        emergency_contact_mobile: emergencyPhone,
+        emergency_contact_relation: emergencyRelation,
+        notes: notes || assignNotes,
+      })
+
+      router.push("/doctor-dashboard/patients")
+    } catch (submissionError: unknown) {
+      setError(
+        submissionError instanceof Error
+          ? submissionError.message
+          : "Unable to create patient",
+      )
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -150,6 +190,12 @@ export default function AddPatientPage() {
           <div className="max-w-3xl bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
             <StepIndicator current={step} />
 
+            {error && (
+              <p className="mb-5 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                {error}
+              </p>
+            )}
+
             {/* ── STEP 1: Personal Info ── */}
             {step === 1 && (
               <div className="space-y-5">
@@ -174,6 +220,14 @@ export default function AddPatientPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <FieldLabel>Patient Code *</FieldLabel>
+                    <Input placeholder="e.g. PAT-001100" value={patientCode} onChange={setPatientCode} />
+                  </div>
+                  <div>
+                    <FieldLabel>Login Password *</FieldLabel>
+                    <Input placeholder="Patient login password" type="password" value={password} onChange={setPassword} />
+                  </div>
                   <div>
                     <FieldLabel>First Name *</FieldLabel>
                     <Input placeholder="e.g. Amit" value={firstName} onChange={setFirstName} />
@@ -209,7 +263,7 @@ export default function AddPatientPage() {
                 </div>
 
                 <div>
-                  <FieldLabel>Address</FieldLabel>
+                  <FieldLabel>Address Line 1</FieldLabel>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3 w-3.5 h-3.5 text-gray-400" />
                     <textarea value={address} onChange={(e) => setAddress(e.target.value)}
@@ -218,6 +272,11 @@ export default function AddPatientPage() {
                       className="w-full pl-9 pr-3 pt-2.5 pb-2 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition-colors"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <FieldLabel>Address Line 2</FieldLabel>
+                  <Input placeholder="Street, area, landmark..." value={addressLine2} onChange={setAddressLine2} />
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
@@ -234,6 +293,10 @@ export default function AddPatientPage() {
                     <FieldLabel>PIN Code</FieldLabel>
                     <Input placeholder="400001" value={pincode} onChange={setPincode} />
                   </div>
+                </div>
+                <div>
+                  <FieldLabel>Country</FieldLabel>
+                  <Input placeholder="e.g. India" value={country} onChange={setCountry} />
                 </div>
               </div>
             )}
@@ -407,10 +470,11 @@ export default function AddPatientPage() {
                 ) : (
                   <button
                     onClick={handleSubmit}
+                    disabled={saving}
                     className="flex items-center gap-2 h-10 px-6 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    Save Patient
+                    {saving ? "Saving..." : "Save Patient"}
                   </button>
                 )}
               </div>

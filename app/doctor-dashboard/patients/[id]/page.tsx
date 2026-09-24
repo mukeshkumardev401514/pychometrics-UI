@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useParams } from "next/navigation"
@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import DoctorSidebar from "@/components/doctor-sidebar"
 import DoctorTopBar from "@/components/doctor-topbar"
+import { apiClient } from "@/lib/api-client"
 
 /* ─── static patient data (keyed by ID) ─── */
 const PATIENT_DB: Record<string, {
@@ -135,15 +136,99 @@ const statusIcon: Record<string, React.ReactNode> = {
 
 type Tab = "Overview" | "Assessments" | "Results" | "Notes"
 
+interface PatientDetailsResponse {
+  id: string
+  patient_code: string
+  date_of_birth: string
+  gender: string
+  address_line1: string
+  address_line2?: string
+  city: string
+  state: string
+  postal_code: string
+  emergency_contact_name: string
+  emergency_contact_mobile: string
+  emergency_contact_relation: string
+  status: string
+  created_at: string
+  updated_at: string
+  notes?: string
+  email?: string
+  first_name?: string
+  last_name?: string
+  mobile?: string
+}
+
 export default function ViewPatientPage() {
   const params   = useParams()
-  const id       = (params?.id as string) ?? "PT-1001"
-  const patient  = PATIENT_DB[id] ?? PATIENT_DB["PT-1001"]
-  const assmnts  = ASSESSMENTS[id] ?? []
-  const notes    = NOTES[id] ?? []
+  const id = (params?.id as string) ?? ""
+  const [patient, setPatient] = useState<typeof PATIENT_DB[string] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    const loadPatient = async () => {
+      try {
+        const response = await apiClient.get<PatientDetailsResponse>(
+          `/api/doctor/patients/${id}`,
+        )
+        const data = response.data
+        const birthDate = new Date(data.date_of_birth)
+        const now = new Date()
+        const age = now.getFullYear() - birthDate.getFullYear() - (
+          now < new Date(now.getFullYear(), birthDate.getMonth(), birthDate.getDate()) ? 1 : 0
+        )
+
+        setPatient({
+          id: data.patient_code,
+          name: `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim() || data.patient_code,
+          avatar: "/psychometrics_doctor_dashboard_assets/avatars/amit-kumar.png",
+          age,
+          gender: data.gender,
+          dob: birthDate.toLocaleDateString(),
+          phone: data.mobile ?? "—",
+          email: data.email ?? "—",
+          address: [
+            data.address_line1,
+            data.address_line2,
+            data.city,
+            data.state,
+            data.postal_code,
+          ].filter(Boolean).join(", "),
+          primaryConcern: "—",
+          referredBy: "—",
+          status: data.status === "ACTIVE" ? "Active" : data.status,
+          joinDate: new Date(data.created_at).toLocaleDateString(),
+          lastSeen: new Date(data.updated_at).toLocaleDateString(),
+          medHistory: data.notes ?? "—",
+          medications: "—",
+          emergencyName: data.emergency_contact_name,
+          emergencyPhone: data.emergency_contact_mobile,
+          emergencyRelation: data.emergency_contact_relation,
+        })
+      } catch (loadError: unknown) {
+        setError(loadError instanceof Error ? loadError.message : "Unable to load patient")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (id) void loadPatient()
+  }, [id])
+
+  const assmnts: typeof ASSESSMENTS[string] = []
+  const notes: typeof NOTES[string] = []
 
   const [tab, setTab] = useState<Tab>("Overview")
   const [newNote, setNewNote] = useState("")
+
+  if (loading) {
+    return <div className="p-8 text-gray-500">Loading patient details...</div>
+  }
+
+  if (error || !patient) {
+    return <div className="p-8 text-red-600">{error || "Patient details not found"}</div>
+  }
 
   const completedAssessments = assmnts.filter((a) => a.status === "Completed")
 

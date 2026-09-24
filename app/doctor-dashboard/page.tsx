@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import DoctorSidebar from "@/components/doctor-sidebar"
 import DoctorTopBar from "@/components/doctor-topbar"
+import { apiClient } from "@/lib/api-client"
 
 /* ─────────────── static data ─────────────── */
 const patients = [
@@ -23,10 +24,10 @@ const patients = [
 ]
 
 const recentResults = [
-  { name: "Amit Kumar",  avatar: "/psychometrics_doctor_dashboard_assets/avatars/amit-kumar.png",  assessment: "Personality Assessment", date: "10 May 2024" },
-  { name: "Priya Singh", avatar: "/psychometrics_doctor_dashboard_assets/avatars/priya-singh.png", assessment: "Anxiety Assessment",     date: "08 May 2024" },
-  { name: "Rahul Mehta", avatar: "/psychometrics_doctor_dashboard_assets/avatars/rahul-mehta.png", assessment: "Work Style Assessment",  date: "05 May 2024" },
-  { name: "Sneha Iyer",  avatar: "/psychometrics_doctor_dashboard_assets/avatars/amit-kumar.png",  assessment: "Emotional Intelligence",  date: "02 May 2024" },
+  { id: "PT-1001", name: "Amit Kumar",  avatar: "/psychometrics_doctor_dashboard_assets/avatars/amit-kumar.png",  assessment: "Personality Assessment", date: "10 May 2024" },
+  { id: "PT-1002", name: "Priya Singh", avatar: "/psychometrics_doctor_dashboard_assets/avatars/priya-singh.png", assessment: "Anxiety Assessment",     date: "08 May 2024" },
+  { id: "PT-1003", name: "Rahul Mehta", avatar: "/psychometrics_doctor_dashboard_assets/avatars/rahul-mehta.png", assessment: "Work Style Assessment",  date: "05 May 2024" },
+  { id: "PT-1006", name: "Sneha Iyer",  avatar: "/psychometrics_doctor_dashboard_assets/avatars/amit-kumar.png",  assessment: "Emotional Intelligence",  date: "02 May 2024" },
 ]
 
 const tasks = [
@@ -78,6 +79,24 @@ function BarChartSvg() {
 /* ─────────────── main component ─────────────── */
 export default function DoctorDashboard() {
   const [patientTab, setPatientTab] = useState<"All" | "Active" | "In Progress" | "Completed">("All")
+  const [doctorName, setDoctorName] = useState("Doctor")
+
+  useEffect(() => {
+    const loadDoctorProfile = async () => {
+      try {
+        const response = await apiClient.get<{
+          first_name: string
+          last_name: string
+        }>("/api/external/doctors/me")
+
+        setDoctorName(response.data.first_name)
+      } catch {
+        // The API interceptor handles expired sessions.
+      }
+    }
+
+    void loadDoctorProfile()
+  }, [])
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans overflow-hidden">
@@ -91,7 +110,7 @@ export default function DoctorDashboard() {
           {/* Welcome Banner */}
           <div className="rounded-2xl bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-100 px-8 py-6 flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-extrabold text-gray-800">Good Morning, Dr. Rajesh!</h1>
+              <h1 className="text-2xl font-extrabold text-gray-800">Good Morning, Dr. {doctorName}!</h1>
               <p className="text-gray-500 text-sm mt-1">Support better mental health with data-driven insights.</p>
             </div>
             <p className="hidden md:block text-teal-700 font-semibold text-sm italic text-right max-w-xs leading-relaxed">
@@ -248,7 +267,7 @@ export default function DoctorDashboard() {
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                   <div className="px-5 py-4 flex items-center justify-between border-b border-gray-100">
                     <h3 className="font-bold text-gray-800 text-sm">Recent Assessment Results</h3>
-                    <button className="text-primary text-xs font-semibold hover:underline">View All</button>
+                    <Link href="/doctor-dashboard/results-reports" className="text-primary text-xs font-semibold hover:underline">View All</Link>
                   </div>
                   <table className="w-full text-xs">
                     <thead className="bg-gray-50">
@@ -272,7 +291,7 @@ export default function DoctorDashboard() {
                           <td className="px-4 py-2.5 text-gray-500">{r.assessment}</td>
                           <td className="px-4 py-2.5 text-gray-500">{r.date}</td>
                           <td className="px-4 py-2.5">
-                            <button className="text-primary font-semibold hover:underline">View Result</button>
+                            <Link href={`/doctor-dashboard/patients/${r.id}`} className="text-primary font-semibold hover:underline">View Result</Link>
                           </td>
                           <td className="px-4 py-2.5">
                             <button className="text-gray-400 hover:text-gray-600">
@@ -295,9 +314,11 @@ export default function DoctorDashboard() {
                     <p className="text-xs text-gray-500 leading-relaxed">
                       Compare psychometric results between patients to identify patterns and insights.
                     </p>
-                    <button className="mt-2 px-4 py-2 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:border-primary hover:text-primary transition-colors">
-                      Compare Now
-                    </button>
+                    <Link href="/doctor-dashboard/compare-results">
+                      <button className="mt-2 px-4 py-2 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:border-primary hover:text-primary transition-colors">
+                        Compare Now
+                      </button>
+                    </Link>
                   </div>
                   <div className="flex justify-end mt-4">
                     <BarChartSvg />
@@ -367,11 +388,10 @@ export default function DoctorDashboard() {
                     { icon: "/psychometrics_doctor_dashboard_assets/icons/quick-download-reports.png",  label: "Download Reports",    href: "/doctor-dashboard/results-reports"            },
                     { icon: "/psychometrics_doctor_dashboard_assets/icons/quick-manage-templates.png",  label: "Manage Templates",    href: "/doctor-dashboard/assessments/templates"      },
                   ].map((q, i) => (
-                    <Link key={i} href={q.href}>
-                      <button className="w-full flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 hover:border-primary/30 hover:bg-teal-50/40 transition-all text-center">
-                        <Image src={q.icon} alt={q.label} width={40} height={40} className="w-10 h-10 object-contain" />
-                        <span className="text-[11px] font-medium text-gray-600 leading-tight">{q.label}</span>
-                      </button>
+                    <Link key={i} href={q.href}
+                      className="flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 hover:border-primary/30 hover:bg-teal-50/40 transition-all text-center">
+                      <Image src={q.icon} alt={q.label} width={40} height={40} className="w-10 h-10 object-contain" />
+                      <span className="text-[11px] font-medium text-gray-600 leading-tight">{q.label}</span>
                     </Link>
                   ))}
                 </div>

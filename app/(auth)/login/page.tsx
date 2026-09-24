@@ -5,16 +5,21 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Eye, EyeOff, Mail, Lock } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, Building2, ChevronDown } from "lucide-react"
 import { loginUser } from "@/lib/auth-service"
 import { normalizeDashboardUser } from "@/lib/dashboard-user"
 
 export default function LoginPage() {
+  const [tenantCode, setTenantCode] = useState("TEST01")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  const TENANTS = [
+    { code: "TEST01", label: "TEST01" },
+  ]
   const router = useRouter()
 
   useEffect(() => {
@@ -29,24 +34,34 @@ export default function LoginPage() {
     setError("")
 
     try {
-      const data = await loginUser({ username: email, password })
+      const data = await loginUser({ username: email, password, tenant_code: tenantCode })
 
       if (data.data) {
         const normalizedUser = normalizeDashboardUser(data.data)
-        if (!normalizedUser) {
-          throw new Error("Invalid user details returned by login API")
+        if (normalizedUser) {
+          localStorage.setItem("user", JSON.stringify(normalizedUser))
         }
-        localStorage.setItem("user", JSON.stringify(normalizedUser))
       }
 
       if (data.access_token) {
         localStorage.setItem("accessToken", data.access_token)
-        document.cookie = `auth_token=${data.access_token}; path=/; max-age=86400; SameSite=Strict`
-        document.cookie = `session=active; path=/; max-age=86400; SameSite=Strict`
+        localStorage.setItem("authTokenExpiresAt", String(
+          Date.now() + (data.expires_in ?? 1800) * 1000
+        ))
+        document.cookie = `auth_token=${data.access_token}; path=/; max-age=${data.expires_in ?? 1800}; SameSite=Strict`
+        document.cookie = `session=active; path=/; max-age=${data.expires_in ?? 1800}; SameSite=Strict`
       }
 
       localStorage.setItem("isLoggedIn", "true")
-      router.push("/dashboard")
+
+      // Redirect doctors to their dashboard, everyone else to the patient dashboard
+      const roleName = (
+        data.role ??
+        data.data?.role_detail?.name ??
+        ""
+      ).toLowerCase()
+      const isDoctor = roleName === "doctor"
+      router.push(isDoctor ? "/doctor-dashboard" : "/dashboard")
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Invalid username or password")
     } finally {
@@ -118,6 +133,24 @@ export default function LoginPage() {
             )}
 
             <form onSubmit={handleLogin} className="space-y-5">
+              {/* Tenant */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">Organization</label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
+                  <select
+                    value={tenantCode}
+                    onChange={(e) => setTenantCode(e.target.value)}
+                    className="w-full h-11 pl-10 pr-9 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm transition-all appearance-none"
+                  >
+                    {TENANTS.map((t) => (
+                      <option key={t.code} value={t.code}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               {/* Email */}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Email Address</label>

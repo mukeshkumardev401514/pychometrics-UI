@@ -6,12 +6,35 @@ import Link from "next/link"
 import {
   Bell, Search, ChevronDown, UserCircle, Settings, LogOut,
 } from "lucide-react"
+import { apiClient } from "@/lib/api-client"
 
 export default function DoctorTopBar() {
   const router = useRouter()
   const [search,      setSearch]      = useState("")
   const [profileOpen, setProfileOpen] = useState(false)
+  const [doctorName, setDoctorName] = useState("Doctor")
+  const [doctorTitle, setDoctorTitle] = useState("")
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const loadDoctorProfile = async () => {
+      try {
+        const response = await apiClient.get<{
+          first_name: string
+          last_name: string
+          qualification: string
+        }>("/api/external/doctors/me")
+
+        const doctor = response.data
+        setDoctorName(`${doctor.first_name} ${doctor.last_name}`.trim())
+        setDoctorTitle(doctor.qualification)
+      } catch {
+        // The API interceptor handles expired sessions.
+      }
+    }
+
+    void loadDoctorProfile()
+  }, [])
 
   /* close dropdown on outside click */
   useEffect(() => {
@@ -61,8 +84,8 @@ export default function DoctorTopBar() {
               DR
             </div>
             <div className="text-left hidden md:block">
-              <p className="text-sm font-semibold text-gray-800 leading-tight">Dr. Rajesh Sharma</p>
-              <p className="text-xs text-gray-500">Clinical Psychologist</p>
+              <p className="text-sm font-semibold text-gray-800 leading-tight">{doctorName}</p>
+              <p className="text-xs text-gray-500">{doctorTitle}</p>
             </div>
             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`} />
           </button>
@@ -72,8 +95,8 @@ export default function DoctorTopBar() {
             <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl border border-gray-100 shadow-lg overflow-hidden z-50">
               {/* User info header */}
               <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                <p className="text-sm font-bold text-gray-800 leading-tight">Dr. Rajesh Sharma</p>
-                <p className="text-xs text-gray-500 mt-0.5">Clinical Psychologist</p>
+                <p className="text-sm font-bold text-gray-800 leading-tight">{doctorName}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{doctorTitle}</p>
               </div>
 
               {/* Menu items */}

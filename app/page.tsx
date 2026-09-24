@@ -25,11 +25,6 @@ export default function LandingPage() {
               understand your personality and make better decisions for your future.
             </p>
             <div className="flex flex-wrap gap-4 pt-2">
-              <Link href="/register">
-                <Button className="bg-primary hover:bg-primary/90 text-white px-7 py-3 text-sm font-semibold rounded-lg">
-                  Start Assessment →
-                </Button>
-              </Link>
               <Link href="/about">
                 <Button variant="outline" className="border-gray-300 text-gray-700 hover:border-primary hover:text-primary px-7 py-3 text-sm font-semibold rounded-lg">
                   Learn More

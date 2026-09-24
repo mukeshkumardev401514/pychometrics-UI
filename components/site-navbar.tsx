@@ -8,13 +8,12 @@ interface SiteNavbarProps {
 
 export default function SiteNavbar({ activePage }: SiteNavbarProps) {
   const links = [
-    { label: "Home",           href: "/" },
-    { label: "About Us",       href: "/about" },
-    { label: "Assessments",    href: "#" },
-    { label: "How It Works",   href: "#" },
-    { label: "Resources",      href: "#" },
-    { label: "Contact",        href: "/contact" },
-    { label: "Doctor Portal",  href: "/doctor-dashboard" },
+    { label: "Home",         href: "/" },
+    { label: "About Us",     href: "/about" },
+    { label: "Assessments",  href: "#" },
+    { label: "How It Works", href: "#" },
+    { label: "Resources",    href: "#" },
+    { label: "Contact",      href: "/contact" },
   ]
 
   return (
@@ -56,11 +55,6 @@ export default function SiteNavbar({ activePage }: SiteNavbarProps) {
           <Link href="/login">
             <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white px-5">
               Login
-            </Button>
-          </Link>
-          <Link href="/register">
-            <Button className="bg-primary hover:bg-primary/90 text-white px-5">
-              Sign Up
             </Button>
           </Link>
         </div>
