@@ -12,6 +12,9 @@ import {
 } from "lucide-react"
 import DoctorSidebar from "@/components/doctor-sidebar"
 import DoctorTopBar from "@/components/doctor-topbar"
+import PatientResultComparison from "@/components/dashboard/patient-result-comparison"
+import PatientPendingAssignments from "@/components/dashboard/patient-pending-assignments"
+import { assignmentError } from "@/lib/doctor-assignments"
 import { apiClient } from "@/lib/api-client"
 
 /* ─── static patient data (keyed by ID) ─── */
@@ -145,6 +148,7 @@ interface PatientDetailsResponse {
   address_line2?: string
   city: string
   state: string
+  country?: string
   postal_code: string
   emergency_contact_name: string
   emergency_contact_mobile: string
@@ -159,12 +163,44 @@ interface PatientDetailsResponse {
   mobile?: string
 }
 
+const addressFields = [
+  { key: "address_line1", label: "Address Line 1", max: 255 },
+  { key: "address_line2", label: "Address Line 2", max: 255 },
+  { key: "city", label: "City", max: 100 },
+  { key: "state", label: "State", max: 100 },
+  { key: "postal_code", label: "Postal Code", max: 20 },
+  { key: "country", label: "Country", max: 100 },
+] as const
+type Address = Record<typeof addressFields[number]["key"], string>
+const emptyAddress: Address = { address_line1: "", address_line2: "", city: "", state: "", postal_code: "", country: "" }
+
 export default function ViewPatientPage() {
   const params   = useParams()
   const id = (params?.id as string) ?? ""
   const [patient, setPatient] = useState<typeof PATIENT_DB[string] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [address, setAddress] = useState<Address>(emptyAddress)
+  const [draftAddress, setDraftAddress] = useState<Address>(emptyAddress)
+  const [editingAddress, setEditingAddress] = useState(false)
+  const [savingAddress, setSavingAddress] = useState(false)
+  const [addressError, setAddressError] = useState("")
+  const [addressSaved, setAddressSaved] = useState(false)
+  async function saveAddress(event: React.FormEvent) {
+    event.preventDefault()
+    if (savingAddress) return
+    setSavingAddress(true); setAddressError(""); setAddressSaved(false)
+    const values = Object.fromEntries(addressFields.map(({ key }) => [key, draftAddress[key].trim() || null]))
+    try {
+      const { data } = await apiClient.patch<PatientDetailsResponse>(`/api/doctor/patients/${id}`, values)
+      const updated = Object.fromEntries(addressFields.map(({ key }) => [key, data[key] ?? ""])) as Address
+      setAddress(updated)
+      setPatient(current => current ? { ...current, address: addressFields.map(({ key }) => updated[key]).filter(Boolean).join(", ") } : current)
+      setEditingAddress(false); setAddressSaved(true)
+    } catch (error) { setAddressError(assignmentError(error)) }
+    finally { setSavingAddress(false) }
+  }
+
 
   useEffect(() => {
     const loadPatient = async () => {
@@ -173,6 +209,7 @@ export default function ViewPatientPage() {
           `/api/doctor/patients/${id}`,
         )
         const data = response.data
+        setAddress(Object.fromEntries(addressFields.map(({ key }) => [key, data[key] ?? ""])) as Address)
         const birthDate = new Date(data.date_of_birth)
         const now = new Date()
         const age = now.getFullYear() - birthDate.getFullYear() - (
@@ -194,6 +231,7 @@ export default function ViewPatientPage() {
             data.city,
             data.state,
             data.postal_code,
+            data.country,
           ].filter(Boolean).join(", "),
           primaryConcern: "—",
           referredBy: "—",
@@ -238,6 +276,21 @@ export default function ViewPatientPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <DoctorTopBar />
         <main className="flex-1 overflow-y-auto p-6 space-y-5">
+          {addressSaved && <p role="status" className="bg-green-50 text-green-800 p-3 rounded-xl">Address updated successfully.</p>}
+          {editingAddress && <form onSubmit={saveAddress} className="bg-white border rounded-xl p-5 space-y-4">
+            <h2 className="font-bold text-gray-800">Edit Address</h2>
+            <fieldset disabled={savingAddress} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {addressFields.map(field => <label key={field.key} className="text-sm">{field.label}
+                <input autoFocus={field.key === "address_line1"} maxLength={field.max} value={draftAddress[field.key]} onChange={e => setDraftAddress(current => ({ ...current, [field.key]: e.target.value }))} className="block w-full border rounded-lg p-2 mt-1" />
+              </label>)}
+            </fieldset>
+            {addressError && <p role="alert" className="text-red-600">{addressError}</p>}
+            <div className="flex gap-3">
+              <button type="submit" disabled={savingAddress} className="bg-primary text-white rounded-lg px-4 py-2 disabled:opacity-50">{savingAddress ? "Saving…" : "Save Address"}</button>
+              <button type="button" disabled={savingAddress} onClick={() => setEditingAddress(false)} className="border rounded-lg px-4 py-2">Cancel</button>
+            </div>
+          </form>}
+
 
           {/* Back + header */}
           <div className="flex items-center justify-between">
@@ -252,8 +305,8 @@ export default function ViewPatientPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button className="flex items-center gap-2 h-9 px-4 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-600 hover:border-primary hover:text-primary transition-colors shadow-sm">
-                <Edit2 className="w-3.5 h-3.5" /> Edit
+              <button onClick={() => { setDraftAddress({ ...address }); setAddressError(""); setAddressSaved(false); setEditingAddress(true) }} className="flex items-center gap-2 h-9 px-4 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-600 hover:border-primary hover:text-primary transition-colors shadow-sm">
+                <Edit2 className="w-3.5 h-3.5" /> Edit Address
               </button>
               <Link href="/doctor-dashboard/assessments">
                 <button className="flex items-center gap-2 h-9 px-4 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors shadow-sm">
@@ -348,6 +401,8 @@ export default function ViewPatientPage() {
             ))}
           </div>
 
+          {(tab === "Overview" || tab === "Assessments") && <PatientPendingAssignments key={id} patientId={id} />}
+
           {/* ─── OVERVIEW ─── */}
           {tab === "Overview" && (
             <div className="grid grid-cols-2 gap-5">
@@ -408,126 +463,7 @@ export default function ViewPatientPage() {
             </div>
           )}
 
-          {/* ─── ASSESSMENTS ─── */}
-          {tab === "Assessments" && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100">
-                <h3 className="font-bold text-gray-800 text-sm">Assigned Assessments</h3>
-                <Link href="/doctor-dashboard/assessments">
-                  <button className="flex items-center gap-1.5 h-8 px-3 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 transition-colors">
-                    <Plus className="w-3.5 h-3.5" /> Assign New
-                  </button>
-                </Link>
-              </div>
-
-              {assmnts.length === 0 ? (
-                <div className="py-16 text-center">
-                  <ClipboardList className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                  <p className="text-sm text-gray-400">No assessments assigned yet.</p>
-                </div>
-              ) : (
-                <table className="w-full text-xs">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left font-semibold text-gray-600">Assessment Type</th>
-                      <th className="px-6 py-3 text-left font-semibold text-gray-600">Assigned On</th>
-                      <th className="px-6 py-3 text-left font-semibold text-gray-600">Due Date</th>
-                      <th className="px-6 py-3 text-left font-semibold text-gray-600">Status</th>
-                      <th className="px-6 py-3 text-left font-semibold text-gray-600">Score</th>
-                      <th className="px-6 py-3 text-left font-semibold text-gray-600">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {assmnts.map((a, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 font-medium text-gray-800">{a.type}</td>
-                        <td className="px-6 py-4 text-gray-400">{a.assignedOn}</td>
-                        <td className="px-6 py-4 text-gray-400">{a.dueDate}</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusStyles[a.status]}`}>
-                            {statusIcon[a.status]} {a.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {a.score !== undefined ? (
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-primary rounded-full" style={{ width: `${a.score}%` }} />
-                              </div>
-                              <span className="font-semibold text-gray-700">{a.score}%</span>
-                            </div>
-                          ) : <span className="text-gray-300">—</span>}
-                        </td>
-                        <td className="px-6 py-4">
-                          {a.status === "Completed"
-                            ? <button className="text-primary font-semibold hover:underline flex items-center gap-1">View Report <ChevronRight className="w-3 h-3" /></button>
-                            : <span className="text-gray-400">Pending</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-
-          {/* ─── RESULTS ─── */}
-          {tab === "Results" && (
-            <div className="space-y-5">
-              {completedAssessments.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-16 text-center">
-                  <BarChart2 className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                  <p className="text-sm text-gray-400">No completed results yet.</p>
-                </div>
-              ) : (
-                completedAssessments.map((a, i) => (
-                  <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-bold text-gray-800">{a.type}</h3>
-                        <p className="text-xs text-gray-400 mt-0.5">Completed on {a.dueDate}</p>
-                      </div>
-                      <button className="flex items-center gap-1.5 h-8 px-3 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary transition-colors">
-                        <Download className="w-3.5 h-3.5" /> Download Report
-                      </button>
-                    </div>
-
-                    {/* Score breakdown */}
-                    <div className="grid grid-cols-5 gap-3">
-                      {["Openness","Conscientiousness","Extraversion","Agreeableness","Neuroticism"].map((dim, di) => {
-                        const val = Math.max(40, Math.min(95, (a.score ?? 70) + (di * 7 - 14)))
-                        return (
-                          <div key={dim} className="bg-gray-50 rounded-xl p-3 text-center space-y-2">
-                            <div className="relative w-12 h-12 mx-auto">
-                              <svg viewBox="0 0 36 36" className="w-12 h-12 -rotate-90">
-                                <circle cx="18" cy="18" r="14" fill="none" stroke="#e5e7eb" strokeWidth="3" />
-                                <circle cx="18" cy="18" r="14" fill="none" stroke="#0d9488" strokeWidth="3"
-                                  strokeDasharray={`${val * 0.88} 88`} strokeLinecap="round" />
-                              </svg>
-                              <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-gray-800">{val}%</span>
-                            </div>
-                            <p className="text-[10px] text-gray-600 font-medium leading-tight">{dim}</p>
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    <div className="bg-teal-50 border border-teal-100 rounded-xl p-4 flex items-start gap-3">
-                      <TrendingUp className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-xs font-bold text-teal-700 mb-1">Interpretation</p>
-                        <p className="text-xs text-teal-700 leading-relaxed">
-                          Patient shows strong emotional resilience with high agreeableness scores.
-                          Moderate stress indicators suggest targeted coping strategies are recommended.
-                          Overall psychometric profile is within healthy ranges.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
+          {tab === "Results" && <PatientResultComparison key={id} patientId={id} />}
 
           {/* ─── NOTES ─── */}
           {tab === "Notes" && (

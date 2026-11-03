@@ -21,3 +21,18 @@ export async function GET(
     },
   })
 }
+
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const authorization = request.headers.get("authorization")
+  const response = await fetch(`${BACKEND_BASE_URL}/data/patients/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...(authorization ? { Authorization: authorization } : {}) },
+    body: await request.text(),
+    cache: "no-store",
+  })
+  return new NextResponse(await response.text(), {
+    status: response.status,
+    headers: { "Content-Type": response.headers.get("Content-Type") ?? "application/json" },
+  })
+}

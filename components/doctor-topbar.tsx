@@ -8,7 +8,7 @@ import {
 } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 
-export default function DoctorTopBar() {
+export default function DoctorTopBar({ patientSearch, onPatientSearch }: { patientSearch?: string; onPatientSearch?: (value: string) => void } = {}) {
   const router = useRouter()
   const [search,      setSearch]      = useState("")
   const [profileOpen, setProfileOpen] = useState(false)
@@ -60,8 +60,8 @@ export default function DoctorTopBar() {
       <div className="flex-1 relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={patientSearch ?? search}
+          onChange={(e) => { setSearch(e.target.value); onPatientSearch?.(e.target.value) }}
           placeholder="Search patients by name, ID or email..."
           className="w-full h-9 pl-9 pr-4 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
         />

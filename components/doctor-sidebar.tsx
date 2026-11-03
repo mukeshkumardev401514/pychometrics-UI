@@ -25,6 +25,7 @@ const navItems = [
 const assessmentSubItems = [
   { icon: ListChecks, label: "All Assessments", href: "/doctor-dashboard/assessments"              },
   { icon: FileText,   label: "Assign New",      href: "/doctor-dashboard/assessments/assign"       },
+  { icon: ClipboardList, label: "Assigned Assessment", href: "/doctor-dashboard/assessments/assigned" },
   { icon: BookOpen,   label: "Templates",       href: "/doctor-dashboard/assessments/templates"    },
 ]
 
@@ -107,12 +108,12 @@ export default function DoctorSidebar() {
       </nav>
 
       {/* Sidebar illustration */}
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 pl-5 pr-2 pb-3">
         <Image
           src="/psychometrics_doctor_dashboard_assets/illustrations/brain-medical-sidebar.png"
           alt="Better Minds Brighter Tomorrows"
           width={224} height={200}
-          className="w-full object-contain"
+          className="block h-auto w-full object-contain"
         />
       </div>
     </aside>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { isAxiosError } from "axios"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
@@ -102,6 +103,14 @@ export default function AddPatientPage() {
   const [gender,      setGender]      = useState("")
   const [phone,       setPhone]       = useState("")
   const [email,       setEmail]       = useState("")
+  const [emailTouched, setEmailTouched] = useState(false)
+  const emailValid = /^[^\s@.]+(?:\.[^\s@.]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(email.trim())
+  const emailMessage = "Enter a valid email address with @ and a domain such as name@example.com."
+  const validateEmail = () => {
+    setEmailTouched(true)
+    if (!emailValid) { setStep(1); return false }
+    return true
+  }
   const [patientCode, setPatientCode] = useState("")
   const [password,    setPassword]    = useState("")
   const [address,     setAddress]     = useState("")
@@ -130,15 +139,16 @@ export default function AddPatientPage() {
   const [error, setError] = useState("")
 
   const handleSubmit = async () => {
+    if (!validateEmail()) return
     setSaving(true)
     setError("")
 
     try {
       await apiClient.post("/api/external/patients", {
-        email,
+        email: email.trim(),
         password,
         first_name: firstName,
-        last_name: lastName,
+        last_name: lastName.trim() || null,
         mobile: phone,
         patient_code: patientCode,
         date_of_birth: dob,
@@ -157,10 +167,17 @@ export default function AddPatientPage() {
 
       router.push("/doctor-dashboard/patients")
     } catch (submissionError: unknown) {
+      const detail = isAxiosError(submissionError)
+        ? submissionError.response?.data?.detail
+        : undefined
       setError(
-        submissionError instanceof Error
-          ? submissionError.message
-          : "Unable to create patient",
+        typeof detail === "string"
+          ? detail
+          : isAxiosError(submissionError) && submissionError.response?.status === 409
+            ? "Email, mobile number or patient code already exists. Please check your details."
+            : submissionError instanceof Error
+              ? submissionError.message
+              : "Unable to create patient",
       )
     } finally {
       setSaving(false)
@@ -233,7 +250,7 @@ export default function AddPatientPage() {
                     <Input placeholder="e.g. Amit" value={firstName} onChange={setFirstName} />
                   </div>
                   <div>
-                    <FieldLabel>Last Name *</FieldLabel>
+                    <FieldLabel>Last Name (optional)</FieldLabel>
                     <Input placeholder="e.g. Kumar" value={lastName} onChange={setLastName} />
                   </div>
                   <div>
@@ -253,12 +270,13 @@ export default function AddPatientPage() {
                     </div>
                   </div>
                   <div>
-                    <FieldLabel>Email Address</FieldLabel>
+                    <FieldLabel>Email Address *</FieldLabel>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                      <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="patient@email.com"
+                      <input type="email" autoComplete="email" id="patient-email" aria-label="Email Address" aria-invalid={emailTouched && !emailValid} aria-describedby={emailTouched && !emailValid ? "patient-email-error" : undefined} required onBlur={() => setEmailTouched(true)} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="patient@email.com"
                         className="w-full h-10 pl-9 pr-3 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors" />
                     </div>
+                    {emailTouched && !emailValid && <p id="patient-email-error" role="alert" className="text-xs text-red-600 mt-1">{emailMessage}</p>}
                   </div>
                 </div>
 
@@ -459,7 +477,7 @@ export default function AddPatientPage() {
               <div className="flex items-center gap-2">
                 {step < 3 ? (
                   <button
-                    onClick={() => setStep((s) => (s + 1) as Step)}
+                    onClick={() => { if (validateEmail()) setStep((s) => (s + 1) as Step) }}
                     className="flex items-center gap-2 h-10 px-6 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
                   >
                     Continue

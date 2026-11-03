@@ -12,31 +12,12 @@ import {
 } from "lucide-react"
 import DoctorSidebar from "@/components/doctor-sidebar"
 import DoctorTopBar from "@/components/doctor-topbar"
+import DoctorCollections, { type PendingTaskState } from "@/components/dashboard/doctor-collections"
+import DashboardPatients from "@/components/dashboard/dashboard-patients"
+import { loadAll, patientName, assignmentError, type PatientRecord, type AssignmentRecord, type CatalogRecord } from "@/lib/doctor-assignments"
 import { apiClient } from "@/lib/api-client"
 
 /* ─────────────── static data ─────────────── */
-const patients = [
-  { id: "PT-1001", name: "Amit Kumar",   avatar: "/psychometrics_doctor_dashboard_assets/avatars/amit-kumar.png",   age: 28, gender: "Male",   assessment: "Personality & Stress",  status: "Completed"   },
-  { id: "PT-1002", name: "Priya Singh",  avatar: "/psychometrics_doctor_dashboard_assets/avatars/priya-singh.png",  age: 34, gender: "Female", assessment: "Anxiety Assessment",    status: "In Progress" },
-  { id: "PT-1003", name: "Rahul Mehta",  avatar: "/psychometrics_doctor_dashboard_assets/avatars/rahul-mehta.png",  age: 22, gender: "Male",   assessment: "Career Orientation",    status: "Completed"   },
-  { id: "PT-1004", name: "Neha Verma",   avatar: "/psychometrics_doctor_dashboard_assets/avatars/neha-verma.png",   age: 29, gender: "Female", assessment: "Depression Screening",  status: "Not Started" },
-  { id: "PT-1005", name: "Suresh Patel", avatar: "/psychometrics_doctor_dashboard_assets/avatars/suresh-patel.png", age: 41, gender: "Male",   assessment: "Workplace Wellbeing",   status: "In Progress" },
-]
-
-const recentResults = [
-  { id: "PT-1001", name: "Amit Kumar",  avatar: "/psychometrics_doctor_dashboard_assets/avatars/amit-kumar.png",  assessment: "Personality Assessment", date: "10 May 2024" },
-  { id: "PT-1002", name: "Priya Singh", avatar: "/psychometrics_doctor_dashboard_assets/avatars/priya-singh.png", assessment: "Anxiety Assessment",     date: "08 May 2024" },
-  { id: "PT-1003", name: "Rahul Mehta", avatar: "/psychometrics_doctor_dashboard_assets/avatars/rahul-mehta.png", assessment: "Work Style Assessment",  date: "05 May 2024" },
-  { id: "PT-1006", name: "Sneha Iyer",  avatar: "/psychometrics_doctor_dashboard_assets/avatars/amit-kumar.png",  assessment: "Emotional Intelligence",  date: "02 May 2024" },
-]
-
-const tasks = [
-  { icon: Users,         text: "3 patients have pending assessments",  sub: "" },
-  { icon: ClipboardList, text: "Review results for Priya Singh",        sub: "Today, 11:00 AM" },
-  { icon: HelpCircle,    text: "Follow up with Amit Kumar",             sub: "Tomorrow, 10:00 AM" },
-  { icon: UserCircle,    text: "Assign assessment to new patient",       sub: "" },
-]
-
 const statusStyles: Record<string, string> = {
   "Completed":   "bg-green-100 text-green-700",
   "In Progress": "bg-amber-100 text-amber-700",
@@ -44,24 +25,20 @@ const statusStyles: Record<string, string> = {
 }
 
 /* ─────────────── Donut chart (pure SVG) ─────────────── */
-function DonutChart() {
-  const r = 54, cx = 70, cy = 70, stroke = 14
-  const circ = 2 * Math.PI * r
-  const completed  = 0.81 * circ
-  const inProgress = 0.19 * circ
-  return (
-    <svg width="140" height="140" viewBox="0 0 140 140">
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth={stroke} />
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f59e0b" strokeWidth={stroke}
-        strokeDasharray={`${inProgress} ${circ}`} strokeDashoffset={0}
-        strokeLinecap="round" transform={`rotate(-90 ${cx} ${cy})`} />
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#0d9488" strokeWidth={stroke}
-        strokeDasharray={`${completed} ${circ - completed}`} strokeDashoffset={-inProgress}
-        strokeLinecap="round" transform={`rotate(-90 ${cx} ${cy})`} />
-      <text x={cx} y={cy - 6} textAnchor="middle" className="fill-gray-800" fontSize="22" fontWeight="700">64</text>
-      <text x={cx} y={cy + 12} textAnchor="middle" fill="#6b7280" fontSize="10">Assessments</text>
-    </svg>
-  )
+function DonutChart({ counts, unavailable }: { counts: number[]; unavailable: boolean }) {
+  const total = counts.reduce((sum, count) => sum + count, 0)
+  const circumference = 2 * Math.PI * 54
+  let offset = 0
+  return <svg width="140" height="140" viewBox="0 0 140 140" aria-label="Live assessment status breakdown">
+    <circle cx="70" cy="70" r="54" fill="none" stroke="#e5e7eb" strokeWidth="14" />
+    {!unavailable && counts.map((count, index) => {
+      const length = total ? count / total * circumference : 0
+      const start = offset; offset += length
+      return <circle key={index} cx="70" cy="70" r="54" fill="none" stroke={["#0d9488", "#f59e0b", "#fca5a5", "#9ca3af"][index]} strokeWidth="14" strokeDasharray={`${length} ${circumference - length}`} strokeDashoffset={-start} transform="rotate(-90 70 70)" />
+    })}
+    <text x="70" y="64" textAnchor="middle" fontSize="22" fontWeight="700">{unavailable ? "—" : total}</text>
+    <text x="70" y="82" textAnchor="middle" fill="#6b7280" fontSize="10">Assessments</text>
+  </svg>
 }
 
 function BarChartSvg() {
@@ -78,7 +55,50 @@ function BarChartSvg() {
 
 /* ─────────────── main component ─────────────── */
 export default function DoctorDashboard() {
-  const [patientTab, setPatientTab] = useState<"All" | "Active" | "In Progress" | "Completed">("All")
+  const [pendingTasks, setPendingTasks] = useState<PendingTaskState>({ loading: true, error: "", assignments: [], catalog: [], patients: [] })
+  const pendingRows = pendingTasks.assignments.filter(a => ["PENDING_PAYMENT", "ASSIGNED", "IN_PROGRESS"].includes(a.assignment_status))
+    .sort((a, b) => Date.parse(b.assigned_at) - Date.parse(a.assigned_at) || a.id.localeCompare(b.id))
+  const unpaidCount = pendingRows.filter(a => a.assignment_status === "PENDING_PAYMENT" && a.payment_required !== false && !a.payment_completed_at).length
+  const unavailable = pendingTasks.loading || !!pendingTasks.error
+  const completedCount = pendingTasks.assignments.filter(a => a.assignment_status === "COMPLETED").length
+  const inProgressCount = pendingTasks.assignments.filter(a => a.assignment_status === "IN_PROGRESS").length
+  const notStartedCount = pendingTasks.assignments.filter(a => ["PENDING_PAYMENT", "ASSIGNED"].includes(a.assignment_status)).length
+  const assignedCount = completedCount + inProgressCount + notStartedCount
+  const otherCount = pendingTasks.assignments.length - assignedCount
+  const metricValue = (count: number) => unavailable ? "—" : String(count)
+  const overviewValue = (count: number) => unavailable ? "—" : `${count} (${assignedCount ? Math.round(count / assignedCount * 100) : 0}%)`
+  const [patientSearch, setPatientSearch] = useState("")
+  const [recentResults, setRecentResults] = useState<{ id: string; resultId: string; name: string; avatar: string; assessment: string; date: string }[]>([])
+  const [resultsLoading, setResultsLoading] = useState(true)
+  const [resultsError, setResultsError] = useState("")
+  useEffect(() => {
+    const controller = new AbortController()
+    async function loadResults() {
+      try {
+        const [patients, assignments, tests, results] = await Promise.all([
+          loadAll<PatientRecord>("/api/external/data/patients", controller.signal),
+          loadAll<AssignmentRecord>("/api/external/data/assessment-assignments", controller.signal),
+          loadAll<CatalogRecord>("/api/external/assessment-catalog", controller.signal),
+          loadAll<{ id: string; assignment_id: string; assessment_version_id: string; status: string; calculated_at: string | null; created_at: string }>("/api/external/data/assessment-results", controller.signal),
+        ])
+        if (controller.signal.aborted) return
+        setRecentResults(results.filter(r => r.status === "GENERATED").sort((a, b) => Date.parse(b.calculated_at || b.created_at) - Date.parse(a.calculated_at || a.created_at)).flatMap(r => {
+          const assignment = assignments.find(a => a.id === r.assignment_id)
+          const patient = patients.find(p => p.id === assignment?.patient_id)
+          if (!patient) return []
+          const test = tests.find(t => t.assessment_version_id === r.assessment_version_id)
+          return [{ id: patient.id, resultId: r.id, name: patientName(patient), avatar: "/psychometrics_doctor_dashboard_assets/avatars/amit-kumar.png", assessment: test?.name || assignment!.assessment_id, date: new Date(r.calculated_at || r.created_at).toLocaleDateString() }]
+        }).slice(0, 5))
+      } catch (error) {
+        if (!controller.signal.aborted) setResultsError(assignmentError(error))
+      } finally {
+        if (!controller.signal.aborted) setResultsLoading(false)
+      }
+    }
+    void loadResults()
+    return () => controller.abort()
+  }, [])
+
   const [doctorName, setDoctorName] = useState("Doctor")
 
   useEffect(() => {
@@ -103,7 +123,7 @@ export default function DoctorDashboard() {
       <DoctorSidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <DoctorTopBar />
+        <DoctorTopBar patientSearch={patientSearch} onPatientSearch={setPatientSearch} />
 
         <main className="flex-1 overflow-y-auto p-6 space-y-5">
 
@@ -121,19 +141,16 @@ export default function DoctorDashboard() {
           {/* Metric Cards + Assign button */}
           <div className="flex items-center gap-4">
             {[
-              { icon: "/psychometrics_doctor_dashboard_assets/icons/metric-total-patients.png",   value: "128", label: "Total Patients",       change: "+12%", up: true },
-              { icon: "/psychometrics_doctor_dashboard_assets/icons/metric-assessments.png",      value: "64",  label: "Assessments Assigned", change: "+18%", up: true },
-              { icon: "/psychometrics_doctor_dashboard_assets/icons/metric-results.png",          value: "52",  label: "Results Completed",    change: "+25%", up: true },
-              { icon: "/psychometrics_doctor_dashboard_assets/icons/metric-progress.png",         value: "12",  label: "In Progress",          change: "-8%",  up: false },
+              { icon: "/psychometrics_doctor_dashboard_assets/icons/metric-total-patients.png",   value: metricValue(pendingTasks.patients.length), label: "Total Patients",       change: "+12%", up: true },
+              { icon: "/psychometrics_doctor_dashboard_assets/icons/metric-assessments.png",      value: metricValue(assignedCount),  label: "Assessments Assigned", change: "+18%", up: true },
+              { icon: "/psychometrics_doctor_dashboard_assets/icons/metric-results.png",          value: metricValue(completedCount),  label: "Tests Completed",    change: "+25%", up: true },
+              { icon: "/psychometrics_doctor_dashboard_assets/icons/metric-progress.png",         value: metricValue(inProgressCount),  label: "In Progress",          change: "-8%",  up: false },
             ].map((m, i) => (
               <div key={i} className="flex-1 bg-white rounded-2xl border border-gray-100 p-4 space-y-2 shadow-sm">
                 <Image src={m.icon} alt={m.label} width={48} height={48} className="w-12 h-12 object-contain" />
                 <p className="text-2xl font-extrabold text-gray-800">{m.value}</p>
                 <p className="text-xs text-gray-500 font-medium">{m.label}</p>
-                <p className={`text-xs font-semibold flex items-center gap-1 ${m.up ? "text-green-600" : "text-red-500"}`}>
-                  {m.up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                  {m.change} <span className="text-gray-400 font-normal">vs last month</span>
-                </p>
+
               </div>
             ))}
             <Link href="/doctor-dashboard/assessments/assign" className="flex-shrink-0">
@@ -146,120 +163,20 @@ export default function DoctorDashboard() {
             </Link>
           </div>
 
+          {!unavailable && <p className="text-sm text-gray-600">
+            Assigned {assignedCount} = Not Started {notStartedCount} + In Progress {inProgressCount} + Completed {completedCount}.
+            {" "}{otherCount} cancelled/expired assignment(s) excluded. Pending tasks include not-started and in-progress tests.
+          </p>}
+
+          <DoctorCollections onPendingChange={setPendingTasks} />
+
           {/* Two-column layout */}
           <div className="grid grid-cols-3 gap-5">
 
             {/* LEFT: Patients table (2/3) */}
             <div className="col-span-2 space-y-5">
 
-              {/* My Patients */}
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100">
-                  <h2 className="font-bold text-gray-800 text-base">My Patients</h2>
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                      <input placeholder="Search patient..." className="h-8 pl-8 pr-3 rounded-lg border border-gray-200 bg-gray-50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30 w-44" />
-                    </div>
-                    <button className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-gray-200 text-xs text-gray-600 hover:border-primary hover:text-primary transition-colors">
-                      <Filter className="w-3.5 h-3.5" /> Filter
-                    </button>
-                  </div>
-                </div>
-
-                {/* Tabs */}
-                <div className="px-6 flex gap-6 border-b border-gray-100">
-                  {[
-                    { label: "All", count: 128 },
-                    { label: "Active", count: 96 },
-                    { label: "In Progress", count: 12 },
-                    { label: "Completed", count: 20 },
-                  ].map((t) => (
-                    <button
-                      key={t.label}
-                      onClick={() => setPatientTab(t.label as any)}
-                      className={`py-3 text-xs font-semibold border-b-2 transition-colors
-                        ${patientTab === t.label
-                          ? "border-primary text-primary"
-                          : "border-transparent text-gray-500 hover:text-primary"}`}
-                    >
-                      {t.label} ({t.count})
-                    </button>
-                  ))}
-                </div>
-
-                {/* Table */}
-                <table className="w-full text-xs">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="w-8 px-4 py-3"><input type="checkbox" className="rounded accent-primary" /></th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-600">Patient Name</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-600">Patient ID</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-600">Age / Gender</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-600">Last Assessment</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-600">Status</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-600">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {patients.map((p) => (
-                      <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3"><input type="checkbox" className="rounded accent-primary" /></td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2.5">
-                            <Image src={p.avatar} alt={p.name} width={32} height={32} className="w-8 h-8 rounded-full object-cover" />
-                            <span className="font-medium text-gray-800">{p.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-gray-500">{p.id}</td>
-                        <td className="px-4 py-3 text-gray-500">{p.age} / {p.gender}</td>
-                        <td className="px-4 py-3 text-gray-600">{p.assessment}</td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusStyles[p.status]}`}>
-                            {p.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Link
-                              href={p.status === "Not Started"
-                                ? `/doctor-dashboard/assessments/assign`
-                                : `/doctor-dashboard/patients/${p.id}`}
-                              className="text-primary font-semibold hover:underline"
-                            >
-                              {p.status === "Not Started" ? "Assign" : "View"}
-                            </Link>
-                            <button className="text-gray-400 hover:text-gray-600">
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* Pagination */}
-                <div className="px-6 py-4 flex items-center justify-between border-t border-gray-100">
-                  <p className="text-xs text-gray-400">Showing 1 to 5 of 128 patients</p>
-                  <div className="flex items-center gap-1">
-                    <button className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center hover:border-primary hover:text-primary transition-colors">
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                    </button>
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <button key={n} className={`w-7 h-7 rounded-lg text-xs font-semibold transition-colors
-                        ${n === 1 ? "bg-primary text-white" : "border border-gray-200 text-gray-600 hover:border-primary hover:text-primary"}`}>
-                        {n}
-                      </button>
-                    ))}
-                    <span className="text-gray-400 text-xs px-1">...</span>
-                    <button className="w-7 h-7 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary transition-colors">26</button>
-                    <button className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center hover:border-primary hover:text-primary transition-colors">
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <DashboardPatients search={patientSearch} onSearch={setPatientSearch} />
 
               {/* Bottom row */}
               <div className="grid grid-cols-2 gap-5">
@@ -280,8 +197,11 @@ export default function DoctorDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {recentResults.map((r, i) => (
-                        <tr key={i} className="hover:bg-gray-50">
+                      {resultsLoading && <tr><td colSpan={5} className="p-4" role="status">Loading recent results…</td></tr>}
+                      {resultsError && <tr><td colSpan={5} className="p-4 text-red-600" role="alert">{resultsError}</td></tr>}
+                      {!resultsLoading && !resultsError && !recentResults.length && <tr><td colSpan={5} className="p-4 text-gray-500">No assessment results available yet.</td></tr>}
+                      {recentResults.map((r) => (
+                        <tr key={r.resultId} className="hover:bg-gray-50">
                           <td className="px-4 py-2.5">
                             <div className="flex items-center gap-2">
                               <Image src={r.avatar} alt={r.name} width={24} height={24} className="w-6 h-6 rounded-full object-cover" />
@@ -291,7 +211,7 @@ export default function DoctorDashboard() {
                           <td className="px-4 py-2.5 text-gray-500">{r.assessment}</td>
                           <td className="px-4 py-2.5 text-gray-500">{r.date}</td>
                           <td className="px-4 py-2.5">
-                            <Link href={`/doctor-dashboard/patients/${r.id}`} className="text-primary font-semibold hover:underline">View Result</Link>
+                            <Link href={`/doctor-dashboard/patients/${r.id}`} className="text-primary font-semibold hover:underline">View Patient</Link>
                           </td>
                           <td className="px-4 py-2.5">
                             <button className="text-gray-400 hover:text-gray-600">
@@ -335,16 +255,16 @@ export default function DoctorDashboard() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-gray-800 text-sm">Assessment Overview</h3>
                   <button className="flex items-center gap-1 text-xs text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1 hover:border-primary hover:text-primary transition-colors">
-                    Last 6 Months <ChevronDown className="w-3 h-3" />
+                    All time
                   </button>
                 </div>
                 <div className="flex items-center gap-4">
-                  <DonutChart />
+                  <DonutChart counts={[completedCount, inProgressCount, notStartedCount]} unavailable={unavailable} />
                   <div className="space-y-2 text-xs">
                     {[
-                      { color: "bg-teal-600",  label: "Completed",   val: "52 (81%)" },
-                      { color: "bg-amber-400", label: "In Progress", val: "12 (19%)" },
-                      { color: "bg-red-300",   label: "Not Started", val: "0 (0%)"   },
+                      { color: "bg-teal-600",  label: "Completed",   val: overviewValue(completedCount) },
+                      { color: "bg-amber-400", label: "In Progress", val: overviewValue(inProgressCount) },
+                      { color: "bg-red-300",   label: "Not Started", val: overviewValue(notStartedCount)   },
                     ].map((item) => (
                       <div key={item.label} className="flex items-center gap-2">
                         <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${item.color}`} />
@@ -356,27 +276,27 @@ export default function DoctorDashboard() {
                 </div>
               </div>
 
-              {/* Upcoming / Pending Tasks */}
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-800 text-sm">Upcoming / Pending Tasks</h3>
-                  <button className="text-primary text-xs font-semibold hover:underline">View All</button>
-                </div>
-                <div className="space-y-1">
-                  {tasks.map((t, i) => (
-                    <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer group">
-                      <div className="w-8 h-8 rounded-full bg-teal-50 flex items-center justify-center flex-shrink-0">
-                        <t.icon className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-700 leading-tight">{t.text}</p>
-                        {t.sub && <p className="text-[10px] text-gray-400 mt-0.5">{t.sub}</p>}
-                      </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-primary transition-colors flex-shrink-0" />
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
+                <h3 className="font-bold text-gray-800 text-sm">Upcoming / Pending Tasks</h3>
+                {pendingTasks.loading && <p role="status" className="text-sm text-gray-500">Loading pending tests…</p>}
+                {pendingTasks.error && <p role="alert" className="text-sm text-red-600">{pendingTasks.error}</p>}
+                {!pendingTasks.loading && !pendingTasks.error && <>
+                  <p className="text-sm font-semibold">{pendingRows.length} pending tests · {unpaidCount} awaiting payment</p>
+                  <div className="max-h-96 overflow-y-auto space-y-2">
+                    {pendingRows.map(row => {
+                      const patient = pendingTasks.patients.find(p => p.id === row.patient_id)
+                      const test = pendingTasks.catalog.find(t => t.assessment_version_id === row.assessment_version_id)
+                      return <Link key={row.id} href={`/doctor-dashboard/patients/${row.patient_id}`} className="block border rounded-lg p-3 hover:bg-teal-50">
+                        <p className="text-sm font-semibold">{patient ? patientName(patient) : row.patient_id}</p>
+                        <p className="text-xs text-gray-600">{test?.name || row.assessment_id}</p>
+                        <p className="text-xs text-gray-500 mt-1">{row.assignment_status.replaceAll("_", " ")}</p>
+                        {row.expires_at && <p className="text-xs text-gray-500">Due: {new Date(row.expires_at).toLocaleDateString()}</p>}
+                      </Link>
+                    })}
+                  </div>
+                  {!pendingRows.length && <p className="text-sm text-gray-500">No pending tests.</p>}
+                </>}
+              </section>
 
               {/* Quick Links */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
