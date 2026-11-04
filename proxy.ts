@@ -10,6 +10,7 @@ const protectedRoutes = [
   "/test-results",
   "/patient-info",
   "/payment",
+  "/doctor-dashboard",
 ];
 
 export function proxy(request: NextRequest) {
@@ -28,7 +29,8 @@ export function proxy(request: NextRequest) {
 
   // It IS a protected route — check for session cookie
   const sessionCookie = request.cookies.get("session")?.value;
-  const isAuthenticated = sessionCookie === "active";
+  const token = request.cookies.get("auth_token")?.value;
+  const isAuthenticated = sessionCookie === "active" && Boolean(token);
 
   if (!isAuthenticated) {
     const loginUrl = new URL("/login", request.url);
@@ -49,5 +51,6 @@ export const config = {
     "/test-results/:path*",
     "/patient-info/:path*",
     "/payment/:path*",
+    "/doctor-dashboard/:path*",
   ],
 };

@@ -1,0 +1,841 @@
+{
+  "info": {
+    "name": "Psychometrics – Doctor Dashboard API",
+    "description": "Complete REST API collection for the Doctor Dashboard at http://localhost:3000/doctor-dashboard.\n\nBase URL variable: {{baseUrl}} = http://localhost:8000/api/v1\n\nAll list endpoints support:\n  ?page=1&limit=20   – pagination\n  ?search=           – text search\n  ?status=           – status filter\n  ?sort=field:asc    – sorting",
+    "_postman_id": "psychometrics-doctor-dashboard-v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "YOUR_JWT_TOKEN_HERE",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth","login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rajesh.sharma@psychometrics.in\",\n  \"password\": \"password123\"\n}"
+            },
+            "description": "Authenticates the doctor and returns a JWT token. Store the token in the `authToken` collection variable."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth","logout"] },
+            "description": "Invalidates the current session token."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth","refresh"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"YOUR_REFRESH_TOKEN\"\n}"
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard","summary"]
+            },
+            "description": "Returns all top-level KPI cards:\n- totalPatients (+ % change vs last month)\n- assessmentsAssigned (+ % change)\n- resultsCompleted (+ % change)\n- inProgress (+ % change)\n- doctorName (for welcome banner)\n- assessmentOverview: { completed, inProgress, notStarted, total }"
+          }
+        },
+        {
+          "name": "Get Pending Tasks",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard","tasks"]
+            },
+            "description": "Returns the doctor's upcoming / pending task list shown in the right-hand panel."
+          }
+        },
+        {
+          "name": "Get Recent Assessment Results",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/recent-results?limit=4",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard","recent-results"],
+              "query": [{ "key": "limit", "value": "4" }]
+            },
+            "description": "Returns the 4 most recently completed assessment results shown on the dashboard."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Patients",
+      "item": [
+        {
+          "name": "List All Patients",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/patients?page=1&limit=20&status=All&search=",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients"],
+              "query": [
+                { "key": "page",   "value": "1"   },
+                { "key": "limit",  "value": "20"  },
+                { "key": "status", "value": "All", "description": "All | Active | In Progress | Completed | Not Started" },
+                { "key": "search", "value": "",    "description": "Search by patient name or ID" }
+              ]
+            },
+            "description": "Paginated list of all patients assigned to the authenticated doctor. Supports tab filtering (All / Active / In Progress / Completed)."
+          }
+        },
+        {
+          "name": "Get Patient by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/patients/PT-1001",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients","PT-1001"]
+            },
+            "description": "Returns full patient profile including personal info, medical history, emergency contact, and quick stats (totalAssessments, completed, avgScore, primaryConcern)."
+          }
+        },
+        {
+          "name": "Create Patient",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/patients",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Amit\",\n  \"lastName\": \"Kumar\",\n  \"dob\": \"1996-03-14\",\n  \"gender\": \"Male\",\n  \"phone\": \"+91 98765 43210\",\n  \"email\": \"amit@email.com\",\n  \"address\": \"12, Andheri West\",\n  \"city\": \"Mumbai\",\n  \"state\": \"Maharashtra\",\n  \"pincode\": \"400053\",\n  \"primaryConcern\": \"Anxiety\",\n  \"referredBy\": \"Self-referred\",\n  \"medHistory\": \"No significant medical history.\",\n  \"medications\": \"None currently.\",\n  \"emergencyName\": \"Sunita Kumar\",\n  \"emergencyPhone\": \"+91 98765 11111\",\n  \"emergencyRelation\": \"Spouse\",\n  \"notes\": \"\",\n  \"initialAssessment\": {\n    \"templateId\": \"TPL-001\",\n    \"dueDate\": \"2024-06-01\",\n    \"priority\": \"Normal\",\n    \"notifyEmail\": true,\n    \"notifySms\": false,\n    \"notes\": \"\"\n  }\n}"
+            },
+            "description": "Step 1-3 form: registers a new patient and optionally assigns an initial assessment in one call."
+          }
+        },
+        {
+          "name": "Update Patient",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/patients/PT-1001",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients","PT-1001"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+91 98765 99999\",\n  \"address\": \"15, Andheri East\",\n  \"medications\": \"Vitamin D 1000IU daily.\"\n}"
+            },
+            "description": "Partial update of any patient fields (Edit button on Patient Profile page)."
+          }
+        },
+        {
+          "name": "Delete Patient",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/patients/PT-1001",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients","PT-1001"]
+            },
+            "description": "Soft-deletes a patient record."
+          }
+        },
+        {
+          "name": "Upload Patient Avatar",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/patients/PT-1001/avatar",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients","PT-1001","avatar"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "avatar", "type": "file", "src": "" }
+              ]
+            },
+            "description": "Uploads a profile photo for the patient (Add Patient step 1 – photo upload)."
+          }
+        },
+
+        {
+          "name": "Get Patient Assessments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/patients/PT-1001/assessments",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients","PT-1001","assessments"]
+            },
+            "description": "Returns all assessments assigned to this patient (Patient Profile → Assessments tab)."
+          }
+        },
+        {
+          "name": "Get Patient Results",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/patients/PT-1001/results",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients","PT-1001","results"]
+            },
+            "description": "Returns all completed assessment results with dimension scores for this patient (Patient Profile → Results tab)."
+          }
+        },
+
+        {
+          "name": "Get Patient Notes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/patients/PT-1001/notes",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients","PT-1001","notes"]
+            },
+            "description": "Returns all clinical notes for this patient (Patient Profile → Notes tab)."
+          }
+        },
+        {
+          "name": "Add Clinical Note",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/patients/PT-1001/notes",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients","PT-1001","notes"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Patient reports significant improvement in sleep quality. Anxiety levels reduced from 7/10 to 4/10.\"\n}"
+            },
+            "description": "Save Note button on Patient Profile → Notes tab."
+          }
+        },
+        {
+          "name": "Delete Clinical Note",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/patients/PT-1001/notes/NOTE-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients","PT-1001","notes","NOTE-001"]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Assessments",
+      "item": [
+        {
+          "name": "List All Assigned Assessments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/assessments?page=1&limit=20&status=&search=",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessments"],
+              "query": [
+                { "key": "page",   "value": "1"  },
+                { "key": "limit",  "value": "20" },
+                { "key": "status", "value": "",  "description": "Completed | In Progress | Not Started" },
+                { "key": "search", "value": "",  "description": "Search by patient name or assessment type" }
+              ]
+            },
+            "description": "Returns all assessments across all patients assigned by this doctor (Assessments → All Assessments tab). Counts: totalAssigned, completed, inProgress, notStarted."
+          }
+        },
+        {
+          "name": "Get Assessment by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/assessments/ASS-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessments","ASS-001"]
+            }
+          }
+        },
+        {
+          "name": "Assign Assessment to Patient",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/assessments",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessments"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"PT-1001\",\n  \"templateId\": \"TPL-001\",\n  \"dueDate\": \"2024-06-15\",\n  \"priority\": \"Normal\",\n  \"notifyEmail\": true,\n  \"notifySms\": false,\n  \"notes\": \"Please complete this before your next session.\"\n}"
+            },
+            "description": "Assign New Assessment form (Assessments → Assign New tab or /assessments/assign page). Returns the created assessment record with a confirmation summary."
+          }
+        },
+        {
+          "name": "Update Assessment",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/assessments/ASS-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessments","ASS-001"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dueDate\": \"2024-06-20\",\n  \"priority\": \"High\",\n  \"status\": \"In Progress\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete / Revoke Assessment",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/assessments/ASS-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessments","ASS-001"]
+            },
+            "description": "Revokes an assessment that has not yet been started."
+          }
+        },
+        {
+          "name": "Get Assessment Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/assessments/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessments","stats"]
+            },
+            "description": "Returns aggregate counts used on the Assessments page stats strip: totalAssigned, completed, inProgress, notStarted."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Assessment Templates",
+      "item": [
+        {
+          "name": "List Templates",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/assessment-templates?category=All&search=",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessment-templates"],
+              "query": [
+                { "key": "category", "value": "All", "description": "All | Personality | Mental Health | Career | Workplace" },
+                { "key": "search",   "value": ""    }
+              ]
+            },
+            "description": "Returns all assessment templates (Assessments → Templates tab and /assessments/templates page). Each template includes: id, name, category, questions, duration, usedCount, lastUsed, difficulty, description, sections[]."
+          }
+        },
+        {
+          "name": "Get Template by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/assessment-templates/TPL-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessment-templates","TPL-001"]
+            }
+          }
+        },
+        {
+          "name": "Create Template",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/assessment-templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessment-templates"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Custom Burnout Screen\",\n  \"category\": \"Workplace\",\n  \"questions\": 30,\n  \"duration\": \"20 min\",\n  \"difficulty\": \"Standard\",\n  \"description\": \"A shorter burnout risk screen based on Maslach criteria.\",\n  \"sections\": [\"Emotional Exhaustion\", \"Depersonalization\", \"Personal Accomplishment\"]\n}"
+            },
+            "description": "Create Template button on /assessments/templates page."
+          }
+        },
+        {
+          "name": "Update Template",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/assessment-templates/TPL-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessment-templates","TPL-001"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated description.\",\n  \"duration\": \"50 min\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Duplicate Template",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/assessment-templates/TPL-001/duplicate",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessment-templates","TPL-001","duplicate"]
+            },
+            "description": "Duplicate button on each template card."
+          }
+        },
+        {
+          "name": "Delete Template",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/assessment-templates/TPL-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessment-templates","TPL-001"]
+            },
+            "description": "Trash icon on each template card."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Results & Reports",
+      "item": [
+        {
+          "name": "List Results",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/results?page=1&limit=20&search=&riskLevel=",
+              "host": ["{{baseUrl}}"],
+              "path": ["results"],
+              "query": [
+                { "key": "page",      "value": "1"  },
+                { "key": "limit",     "value": "20" },
+                { "key": "search",    "value": ""   },
+                { "key": "riskLevel", "value": "",  "description": "Low | Moderate | High" }
+              ]
+            },
+            "description": "Returns completed assessment results for all patients. Each record includes: patientId, patientName, assessment, date, score (0-100), riskLevel, trend. Used on Results & Reports page and dashboard recent-results panel."
+          }
+        },
+        {
+          "name": "Get Result by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/results/RES-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["results","RES-001"]
+            },
+            "description": "Full result detail including dimension breakdown scores (Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism), interpretation text, and score history for the patient."
+          }
+        },
+        {
+          "name": "Download Result Report (PDF)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/results/RES-001/download",
+              "host": ["{{baseUrl}}"],
+              "path": ["results","RES-001","download"]
+            },
+            "description": "Returns the report as a PDF binary (Content-Type: application/pdf). Triggered by the Download Report button on patient Results tab and the download icon in Results & Reports table."
+          }
+        },
+        {
+          "name": "Export All Results (CSV/PDF)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/results/export?format=pdf",
+              "host": ["{{baseUrl}}"],
+              "path": ["results","export"],
+              "query": [
+                { "key": "format", "value": "pdf", "description": "pdf | csv" }
+              ]
+            },
+            "description": "Export All button on Results & Reports page header."
+          }
+        },
+        {
+          "name": "Get Results Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/results/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["results","stats"]
+            },
+            "description": "Returns summary stats: totalReports, avgScore (%), highRiskCases count. Used in the 3-card stats row on the Results page."
+          }
+        },
+
+        {
+          "name": "Compare Patient Results",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/results/compare?patientIds=PT-1001,PT-1002,PT-1003",
+              "host": ["{{baseUrl}}"],
+              "path": ["results","compare"],
+              "query": [
+                { "key": "patientIds", "value": "PT-1001,PT-1002,PT-1003", "description": "Comma-separated list of 2–4 patient IDs" }
+              ]
+            },
+            "description": "Returns side-by-side dimension scores for up to 4 patients. Used by the Compare Results page. Response shape: [{ patientId, name, scores: { personality, anxiety, career, emotional, workplace } }]"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Calendar & Appointments",
+      "item": [
+        {
+          "name": "List Appointments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/appointments?year=2024&month=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments"],
+              "query": [
+                { "key": "year",  "value": "2024" },
+                { "key": "month", "value": "5",   "description": "1-12" }
+              ]
+            },
+            "description": "Returns all appointments for the given month, keyed by date (YYYY-MM-DD). Each event: time, patientId, patientName, type (Follow-up Session | Review Results | Initial Assessment | Assessment Assign | Progress Review | Debrief Session), color."
+          }
+        },
+        {
+          "name": "Get Upcoming Appointments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/appointments/upcoming?limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments","upcoming"],
+              "query": [
+                { "key": "limit", "value": "5" }
+              ]
+            },
+            "description": "Returns upcoming appointments list shown in the right-side panel on the Calendar page."
+          }
+        },
+        {
+          "name": "Create Appointment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/appointments",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"PT-1001\",\n  \"date\": \"2024-05-25\",\n  \"time\": \"10:00 AM\",\n  \"type\": \"Follow-up Session\",\n  \"notes\": \"\"\n}"
+            },
+            "description": "New Appointment button on the Calendar page."
+          }
+        },
+        {
+          "name": "Update Appointment",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/APT-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments","APT-001"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"time\": \"11:00 AM\",\n  \"type\": \"Review Results\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Appointment",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/appointments/APT-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments","APT-001"]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Doctor Profile",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/doctors/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctors","me"]
+            },
+            "description": "Returns the authenticated doctor's full profile: name, title, email, phone, location, licenseNumber, experience, specialization, languages, bio. Also includes quickStats: totalPatients, assessmentsDone, avgRating, yearsExperience."
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/doctors/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctors","me"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dr. Rajesh Sharma\",\n  \"title\": \"Clinical Psychologist\",\n  \"phone\": \"+91 98765 43210\",\n  \"location\": \"Mumbai, Maharashtra\",\n  \"specialization\": \"Cognitive Behavioral Therapy, Psychometric Assessment\",\n  \"languages\": \"English, Hindi, Marathi\",\n  \"bio\": \"Dr. Rajesh Sharma is a licensed clinical psychologist...\"\n}"
+            },
+            "description": "Save Changes button on the My Profile page (Edit Profile mode)."
+          }
+        },
+        {
+          "name": "Upload Profile Avatar",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/doctors/me/avatar",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctors","me","avatar"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "avatar", "type": "file", "src": "" }
+              ]
+            },
+            "description": "Camera button on the My Profile avatar (Edit mode)."
+          }
+        },
+        {
+          "name": "Get My Activity Log",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/doctors/me/activity?limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctors","me","activity"],
+              "query": [{ "key": "limit", "value": "10" }]
+            },
+            "description": "Returns recent activity entries shown in the My Profile page: action text and timestamp."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Settings",
+      "item": [
+        {
+          "name": "Get Settings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/doctors/me/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctors","me","settings"]
+            },
+            "description": "Returns all current settings: notifications (emailAlerts, smsAlerts, newPatient, assessmentDone, taskReminders, weeklyReport), privacy (twoFactor, sessionTimeout, activityLog), appearance (darkMode, compactView, language), account (accountType, memberSince, subscription, renewalDate)."
+          }
+        },
+        {
+          "name": "Update Notification Settings",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/doctors/me/settings/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctors","me","settings","notifications"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emailAlerts\": true,\n  \"smsAlerts\": false,\n  \"newPatient\": true,\n  \"assessmentDone\": true,\n  \"taskReminders\": true,\n  \"weeklyReport\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Privacy & Security Settings",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/doctors/me/settings/privacy",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctors","me","settings","privacy"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"twoFactor\": false,\n  \"sessionTimeout\": true,\n  \"activityLog\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Appearance Settings",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/doctors/me/settings/appearance",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctors","me","settings","appearance"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"darkMode\": false,\n  \"compactView\": false,\n  \"language\": \"English\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/doctors/me/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctors","me","change-password"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"oldpassword123\",\n  \"newPassword\": \"newpassword456\",\n  \"confirmPassword\": \"newpassword456\"\n}"
+            },
+            "description": "Settings → Privacy & Security → Change Password section."
+          }
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/doctors/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctors","me"]
+            },
+            "description": "Settings → Account → Delete Account button."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/notifications?page=1&limit=20&unreadOnly=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"],
+              "query": [
+                { "key": "page",       "value": "1"     },
+                { "key": "limit",      "value": "20"    },
+                { "key": "unreadOnly", "value": "false" }
+              ]
+            },
+            "description": "Returns notification bell items shown in DoctorTopBar."
+          }
+        },
+        {
+          "name": "Mark Notification Read",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/notifications/NOTIF-001/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications","NOTIF-001","read"]
+            }
+          }
+        },
+        {
+          "name": "Mark All Notifications Read",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications","read-all"]
+            }
+          }
+        }
+      ]
+    }
+
+  ]
+}

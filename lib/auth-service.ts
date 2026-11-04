@@ -3,6 +3,7 @@ import { apiFetch } from "@/lib/backend-api"
 export interface LoginCredentials {
   username: string;
   password: string;
+  tenant_code: string;
 }
 
 export interface PatientRegistrationPayload {
@@ -22,14 +23,20 @@ export interface PatientRegistrationPayload {
 }
 
 export interface LoginResponse {
-  status: string;
-  message: string;
+  status?: string;
+  message?: string;
+  access_token?: string;
+  token_type?: string;
+  expires_in?: number;
+  user_id?: string;
+  tenant_id?: string;
+  tenant_code?: string;
+  role?: string;
   data?: {
     patient_detail?: Record<string, unknown>;
     hospital_detail?: Record<string, unknown>;
     role_detail?: { id: number; name: string };
   };
-  access_token?: string;
 }
 
 export const USER_ROLE = {
@@ -125,7 +132,11 @@ export async function loginUser(credentials: LoginCredentials): Promise<LoginRes
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(credentials),
+    body: JSON.stringify({
+      tenant_code: credentials.tenant_code,
+      email: credentials.username,
+      password: credentials.password,
+    }),
   });
 
   const responseData = await response.json().catch(() => ({}));

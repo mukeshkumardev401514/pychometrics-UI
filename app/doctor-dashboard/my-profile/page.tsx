@@ -1,21 +1,34 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Camera, Mail, Phone, MapPin, Edit2, Save, X } from "lucide-react"
 import DoctorSidebar from "@/components/doctor-sidebar"
 import DoctorTopBar from "@/components/doctor-topbar"
+import { apiClient } from "@/lib/api-client"
 
 const initialProfile = {
-  name:           "Dr. Rajesh Sharma",
-  title:          "Clinical Psychologist",
-  email:          "rajesh.sharma@psychometrics.in",
-  phone:          "+91 98765 43210",
-  location:       "Mumbai, Maharashtra",
-  license:        "MH-PSY-2019-04521",
-  experience:     "8 Years",
-  specialization: "Cognitive Behavioral Therapy, Psychometric Assessment",
-  languages:      "English, Hindi, Marathi",
-  bio:            "Dr. Rajesh Sharma is a licensed clinical psychologist with over 8 years of experience in psychometric evaluation and cognitive behavioral therapy. He specializes in identifying mental health patterns and helping patients achieve better outcomes through data-driven insights.",
+  name: "",
+  title: "",
+  email: "",
+  phone: "",
+  location: "",
+  license: "",
+  experience: "",
+  specialization: "",
+  languages: "",
+  bio: "",
+}
+
+interface DoctorProfileResponse {
+  first_name: string
+  last_name: string
+  email: string
+  mobile: string
+  specialization: string
+  qualification: string
+  medical_registration_number: string | null
+  experience_years: number | null
+  bio: string | null
 }
 
 const stats = [
@@ -37,6 +50,36 @@ export default function MyProfilePage() {
   const [profile, setProfile] = useState(initialProfile)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft]     = useState(initialProfile)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const response = await apiClient.get<DoctorProfileResponse>("/api/external/doctors/me")
+        const doctor = response.data
+        const loadedProfile = {
+          ...initialProfile,
+          name: `${doctor.first_name} ${doctor.last_name}`.trim(),
+          title: doctor.qualification,
+          email: doctor.email,
+          phone: doctor.mobile,
+          license: doctor.medical_registration_number ?? "Not provided",
+          experience: doctor.experience_years ? `${doctor.experience_years} Years` : "Not provided",
+          specialization: doctor.specialization,
+          bio: doctor.bio ?? "Not provided",
+        }
+        setProfile(loadedProfile)
+        setDraft(loadedProfile)
+      } catch {
+        setError("Unable to load your profile.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    void loadProfile()
+  }, [])
 
   const save = () => { setProfile(draft); setEditing(false) }
   const cancel = () => { setDraft(profile); setEditing(false) }
@@ -93,6 +136,14 @@ export default function MyProfilePage() {
               </div>
             )}
           </div>
+
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</p>
+          )}
+
+          {loading && (
+            <div className="text-sm text-gray-500">Loading profile...</div>
+          )}
 
           <div className="grid grid-cols-3 gap-5">
             {/* LEFT: Avatar + stats */}

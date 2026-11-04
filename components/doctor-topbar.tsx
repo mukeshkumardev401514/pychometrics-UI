@@ -6,12 +6,35 @@ import Link from "next/link"
 import {
   Bell, Search, ChevronDown, UserCircle, Settings, LogOut,
 } from "lucide-react"
+import { apiClient } from "@/lib/api-client"
 
-export default function DoctorTopBar() {
+export default function DoctorTopBar({ patientSearch, onPatientSearch }: { patientSearch?: string; onPatientSearch?: (value: string) => void } = {}) {
   const router = useRouter()
   const [search,      setSearch]      = useState("")
   const [profileOpen, setProfileOpen] = useState(false)
+  const [doctorName, setDoctorName] = useState("Doctor")
+  const [doctorTitle, setDoctorTitle] = useState("")
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const loadDoctorProfile = async () => {
+      try {
+        const response = await apiClient.get<{
+          first_name: string
+          last_name: string
+          qualification: string
+        }>("/api/external/doctors/me")
+
+        const doctor = response.data
+        setDoctorName(`${doctor.first_name} ${doctor.last_name}`.trim())
+        setDoctorTitle(doctor.qualification)
+      } catch {
+        // The API interceptor handles expired sessions.
+      }
+    }
+
+    void loadDoctorProfile()
+  }, [])
 
   /* close dropdown on outside click */
   useEffect(() => {
@@ -37,8 +60,8 @@ export default function DoctorTopBar() {
       <div className="flex-1 relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={patientSearch ?? search}
+          onChange={(e) => { setSearch(e.target.value); onPatientSearch?.(e.target.value) }}
           placeholder="Search patients by name, ID or email..."
           className="w-full h-9 pl-9 pr-4 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
         />
@@ -61,8 +84,8 @@ export default function DoctorTopBar() {
               DR
             </div>
             <div className="text-left hidden md:block">
-              <p className="text-sm font-semibold text-gray-800 leading-tight">Dr. Rajesh Sharma</p>
-              <p className="text-xs text-gray-500">Clinical Psychologist</p>
+              <p className="text-sm font-semibold text-gray-800 leading-tight">{doctorName}</p>
+              <p className="text-xs text-gray-500">{doctorTitle}</p>
             </div>
             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`} />
           </button>
@@ -72,8 +95,8 @@ export default function DoctorTopBar() {
             <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl border border-gray-100 shadow-lg overflow-hidden z-50">
               {/* User info header */}
               <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                <p className="text-sm font-bold text-gray-800 leading-tight">Dr. Rajesh Sharma</p>
-                <p className="text-xs text-gray-500 mt-0.5">Clinical Psychologist</p>
+                <p className="text-sm font-bold text-gray-800 leading-tight">{doctorName}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{doctorTitle}</p>
               </div>
 
               {/* Menu items */}

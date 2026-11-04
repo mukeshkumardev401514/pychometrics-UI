@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -9,17 +9,56 @@ import {
 } from "lucide-react"
 import DoctorSidebar from "@/components/doctor-sidebar"
 import DoctorTopBar from "@/components/doctor-topbar"
+import { apiClient } from "@/lib/api-client"
 
-const allPatients = [
-  { id: "PT-1001", name: "Amit Kumar",   avatar: "/psychometrics_doctor_dashboard_assets/avatars/amit-kumar.png",   age: 28, gender: "Male",   phone: "+91 98765 43210", email: "amit@email.com",   assessment: "Personality & Stress",  status: "Completed",   lastSeen: "10 May 2024" },
-  { id: "PT-1002", name: "Priya Singh",  avatar: "/psychometrics_doctor_dashboard_assets/avatars/priya-singh.png",  age: 34, gender: "Female", phone: "+91 91234 56789", email: "priya@email.com",  assessment: "Anxiety Assessment",    status: "In Progress", lastSeen: "08 May 2024" },
-  { id: "PT-1003", name: "Rahul Mehta",  avatar: "/psychometrics_doctor_dashboard_assets/avatars/rahul-mehta.png",  age: 22, gender: "Male",   phone: "+91 99887 76655", email: "rahul@email.com",  assessment: "Career Orientation",    status: "Completed",   lastSeen: "05 May 2024" },
-  { id: "PT-1004", name: "Neha Verma",   avatar: "/psychometrics_doctor_dashboard_assets/avatars/neha-verma.png",   age: 29, gender: "Female", phone: "+91 88123 45678", email: "neha@email.com",   assessment: "Depression Screening",  status: "Not Started", lastSeen: "01 May 2024" },
-  { id: "PT-1005", name: "Suresh Patel", avatar: "/psychometrics_doctor_dashboard_assets/avatars/suresh-patel.png", age: 41, gender: "Male",   phone: "+91 77654 32109", email: "suresh@email.com", assessment: "Workplace Wellbeing",   status: "In Progress", lastSeen: "03 May 2024" },
-  { id: "PT-1006", name: "Sneha Iyer",   avatar: "/psychometrics_doctor_dashboard_assets/avatars/amit-kumar.png",   age: 26, gender: "Female", phone: "+91 90011 22334", email: "sneha@email.com",  assessment: "Emotional Intelligence", status: "Completed",   lastSeen: "29 Apr 2024" },
-]
+interface PatientApiResponse {
+  id: string
+  user_id: string
+  patient_code?: string
+  first_name?: string
+  last_name?: string
+  mobile?: string
+  email?: string
+  date_of_birth?: string
+  gender?: string
+  status?: string
+  updated_at?: string
+}
+
+interface PatientsResponse {
+  counts?: {
+    total_patients: number
+    active: number
+    in_progress: number
+    not_started: number
+  }
+  pagination?: {
+    limit: number
+    offset: number
+    total: number
+    total_pages: number
+  }
+  items?: PatientApiResponse[]
+  data?: PatientApiResponse[]
+  patients?: PatientApiResponse[]
+}
+
+type Patient = {
+  backendId: string
+  id: string
+  name: string
+  avatar: string
+  age: string
+  gender: string
+  phone: string
+  email: string
+  assessment: string
+  status: string
+  lastSeen: string
+}
 
 const statusStyles: Record<string, string> = {
+  "Active":      "bg-green-100 text-green-700",
   "Completed":   "bg-green-100 text-green-700",
   "In Progress": "bg-amber-100 text-amber-700",
   "Not Started": "bg-red-100 text-red-600",
@@ -30,6 +69,85 @@ type Tab = "All" | "Active" | "In Progress" | "Completed"
 export default function PatientsPage() {
   const [tab, setTab] = useState<Tab>("All")
   const [search, setSearch] = useState("")
+  const [allPatients, setAllPatients] = useState<Patient[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [page, setPage] = useState(1)
+  const [hasNextPage, setHasNextPage] = useState(false)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalPatients, setTotalPatients] = useState(0)
+  const [patientCounts, setPatientCounts] = useState({
+    active: 0,
+    inProgress: 0,
+    notStarted: 0,
+  })
+
+  const PAGE_SIZE = 10
+
+  useEffect(() => {
+    const loadPatients = async () => {
+      setLoading(true)
+      setError("")
+
+      try {
+        const response = await apiClient.get<PatientApiResponse[] | PatientsResponse>(
+          `/api/external/data/patients?limit=${PAGE_SIZE}&offset=${(page - 1) * PAGE_SIZE}`,
+        )
+        const payload = response.data
+        const patients = Array.isArray(payload)
+          ? payload
+          : payload.items ?? payload.data ?? payload.patients ?? []
+
+        if (!Array.isArray(payload)) {
+          setHasNextPage(
+            payload.pagination
+              ? page < payload.pagination.total_pages
+              : patients.length === PAGE_SIZE,
+          )
+          setTotalPatients(payload.pagination?.total ?? 0)
+          setTotalPages(
+            payload.pagination?.total_pages ??
+            Math.ceil((payload.pagination?.total ?? 0) / PAGE_SIZE),
+          )
+          setPatientCounts({
+            active: payload.counts?.active ?? 0,
+            inProgress: payload.counts?.in_progress ?? 0,
+            notStarted: payload.counts?.not_started ?? 0,
+          })
+        } else {
+          setHasNextPage(patients.length === PAGE_SIZE)
+          setTotalPatients(patients.length)
+          setTotalPages(Math.max(1, Math.ceil(patients.length / PAGE_SIZE)))
+        }
+
+        setAllPatients(patients.map((patient) => ({
+          backendId: patient.id,
+          id: patient.patient_code ?? patient.id,
+          name: patient.first_name
+            ? `${patient.first_name} ${patient.last_name ?? ""}`.trim()
+            : `Patient ${patient.patient_code ?? patient.id}`,
+          avatar: "/psychometrics_doctor_dashboard_assets/avatars/amit-kumar.png",
+          age: patient.date_of_birth
+            ? String(new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear())
+            : "—",
+          gender: patient.gender ?? "—",
+          phone: patient.mobile ?? "—",
+          email: patient.email ?? "—",
+          assessment: "—",
+          status: patient.status === "ACTIVE" ? "Active" : patient.status ?? "Active",
+          lastSeen: patient.updated_at
+            ? new Date(patient.updated_at).toLocaleDateString()
+            : "—",
+        })))
+      } catch (loadError: unknown) {
+        setError(loadError instanceof Error ? loadError.message : "Unable to load patients")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    void loadPatients()
+  }, [page])
 
   const filtered = allPatients.filter((p) => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.id.includes(search)
@@ -64,10 +182,10 @@ export default function PatientsPage() {
           {/* Stats row */}
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: "Total Patients", value: "128", color: "text-gray-800" },
-              { label: "Active",         value: "96",  color: "text-green-600" },
-              { label: "In Progress",    value: "12",  color: "text-amber-600" },
-              { label: "Not Started",    value: "20",  color: "text-red-500"   },
+              { label: "Total Patients", value: totalPatients, color: "text-gray-800" },
+              { label: "Active", value: patientCounts.active, color: "text-green-600" },
+              { label: "In Progress", value: patientCounts.inProgress, color: "text-amber-600" },
+              { label: "Not Started", value: patientCounts.notStarted, color: "text-red-500" },
             ].map((s) => (
               <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
                 <p className={`text-2xl font-extrabold ${s.color}`}>{s.value}</p>
@@ -122,7 +240,17 @@ export default function PatientsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {filtered.map((p) => (
+                {loading && (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500">Loading patients...</td>
+                  </tr>
+                )}
+                {error && !loading && (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-8 text-center text-red-600">{error}</td>
+                  </tr>
+                )}
+                {!loading && !error && filtered.map((p) => (
                   <tr key={p.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3"><input type="checkbox" className="rounded accent-primary" /></td>
                     <td className="px-4 py-3">
@@ -148,7 +276,7 @@ export default function PatientsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Link href={`/doctor-dashboard/patients/${p.id}`}
+                        <Link href={`/doctor-dashboard/patients/${p.backendId}`}
                           className="text-primary font-semibold hover:underline">View</Link>
                         <button className="text-gray-400 hover:text-gray-600"><MoreVertical className="w-4 h-4" /></button>
                       </div>
@@ -159,18 +287,34 @@ export default function PatientsPage() {
             </table>
 
             <div className="px-6 py-4 flex items-center justify-between border-t border-gray-100">
-              <p className="text-xs text-gray-400">Showing {filtered.length} of {allPatients.length} patients</p>
+              <p className="text-xs text-gray-400">Showing {filtered.length} of {totalPatients} patients</p>
               <div className="flex items-center gap-1">
-                <button className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center hover:border-primary hover:text-primary transition-colors">
+                <button
+                  onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
+                  disabled={page === 1 || loading}
+                  className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center hover:border-primary hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
                   <ArrowLeft className="w-3.5 h-3.5" />
                 </button>
-                {[1, 2, 3].map((n) => (
-                  <button key={n} className={`w-7 h-7 rounded-lg text-xs font-semibold transition-colors
-                    ${n === 1 ? "bg-primary text-white" : "border border-gray-200 text-gray-600 hover:border-primary hover:text-primary"}`}>
-                    {n}
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+                  <button
+                    key={pageNumber}
+                    onClick={() => setPage(pageNumber)}
+                    disabled={loading}
+                    className={`w-7 h-7 rounded-lg text-xs font-semibold transition-colors ${
+                      pageNumber === page
+                        ? "bg-primary text-white"
+                        : "border border-gray-200 text-gray-600 hover:border-primary hover:text-primary"
+                    }`}
+                  >
+                    {pageNumber}
                   </button>
                 ))}
-                <button className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center hover:border-primary hover:text-primary transition-colors">
+                <button
+                  onClick={() => setPage((currentPage) => currentPage + 1)}
+                  disabled={!hasNextPage || loading}
+                  className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center hover:border-primary hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
